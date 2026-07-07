@@ -1,27 +1,42 @@
 ﻿# KUNG FU CHESS - C++ Game
 
-׳₪׳¨׳•׳§׳˜ C++ ׳׳׳©׳—׳§ KUNG FU CHESS.
+פרויקט C++ למשחק KUNG FU CHESS.
 
 ## Requirements
 
-- CMake 3.10+
-- C++17 compiler (MSVC, GCC, or Clang)
+- C++17 compiler (`g++` from MSYS2/MinGW, or MSVC)
 
-## Build
+## Build & Run
 
-```bash
-mkdir build
-cd build
-cmake ..
-cmake --build .
+```powershell
+.\build.bat
+.\build\KungFuChess.exe
+```
+
+Build and run in one command:
+
+```powershell
+.\build.bat run
+```
+
+With input from a file:
+
+```powershell
+Get-Content input.txt | .\build\KungFuChess.exe
+```
+
+## Manual build (without script)
+
+```powershell
+C:\msys64\mingw64\bin\g++.exe -std=c++17 -Iinclude src\main.cpp src\Board.cpp src\Game.cpp -o build\KungFuChess.exe
 ```
 
 ## Project Structure
 
 ```
 KungFuChess/
-ג”ג”€ג”€ src/
-ג”ג”€ג”€ include/
-ג”ג”€ג”€ CMakeLists.txt
-ג””ג”€ג”€ README.md
+├── src/
+├── include/
+├── build.bat
+└── README.md
 ```
