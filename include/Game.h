@@ -19,6 +19,11 @@ public:
     void handleClick(int x, int y);
     void handleWait(int ms);
     void handlePrintBoard() const;
+
+    const Board& getBoard() const { return board; }
+    long long getGameClockMs() const { return gameClockMs; }
+    bool isPieceSelected() const { return hasSelection; }
+    Position getSelectedPosition() const { return selectedPos; }
 };
 
 #endif

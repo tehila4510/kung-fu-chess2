@@ -1,4 +1,5 @@
 ﻿#include "Game.h"
+#include "MoveRules.h"
 #include <iostream>
 
 bool Game::setup(const std::vector<std::string>& lines, size_t& index) {
@@ -34,6 +35,10 @@ void Game::handleSelectNew(const Position& pos) {
 }
 
 void Game::handleMoveRequest(const Position& from, const Position& to) {
+    if (!isValidMove(board, from, to)) {
+        return;
+    }
+
     std::string piece = board.getCell(from);
     board.setCell(to, piece);
     board.setCell(from, ".");

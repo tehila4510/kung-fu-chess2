@@ -12,10 +12,21 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include)
 
-set(SOURCES
-    src/main.cpp
+set(CORE_SOURCES
     src/Board.cpp
     src/Game.cpp
+    src/MoveRules.cpp
 )
 
-add_executable(${PROJECT_NAME} ${SOURCES})
+add_executable(${PROJECT_NAME} src/main.cpp ${CORE_SOURCES})
+
+add_executable(KungFuChessTests
+    tests/test_main.cpp
+    tests/BoardTest.cpp
+    tests/MoveRulesTest.cpp
+    tests/GameTest.cpp
+    ${CORE_SOURCES}
+)
+
+enable_testing()
+add_test(NAME KungFuChessTests COMMAND KungFuChessTests)
