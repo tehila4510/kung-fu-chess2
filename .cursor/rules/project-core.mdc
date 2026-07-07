@@ -1,0 +1,31 @@
+---
+description: Core project conventions for Kung Fu Chess
+alwaysApply: true
+---
+
+# Kung Fu Chess — Core Rules
+
+## Stack
+
+- C++17, STL only, no third-party deps
+- Headers in `include/`, sources in `src/`
+- Build: `.\build.bat` or CMake
+
+## Code style
+
+- Include guards: `#ifndef BOARD_H` / `#define BOARD_H` / `#endif`
+- Classes: PascalCase (`Game`, `Board`); methods: camelCase (`handleClick`)
+- Prefer `const` methods and references for read-only params
+- Keep helpers as `static` functions in `.cpp` files when file-local
+
+## Domain
+
+- Cell tokens: `"."` empty; `"wK"`, `"bQ"` etc. — color (`w`/`b`) + piece (`KQRBNP`)
+- `Board::CELL_SIZE = 100` — pixel coords map via `pixelToCell(x, y)`
+- `Position`: `{ row, col }` with `isValid()` check
+
+## Constraints
+
+- Minimize diff scope; do not refactor unrelated code
+- Do not add tests or docs unless requested
+- Do not create git commits unless the user asks

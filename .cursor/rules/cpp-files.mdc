@@ -1,0 +1,50 @@
+---
+description: C++ file conventions for Kung Fu Chess
+globs: "{src/**,include/**}"
+alwaysApply: false
+---
+
+# C++ Conventions
+
+## File pairing
+
+| Header | Source |
+|--------|--------|
+| `include/Board.h` | `src/Board.cpp` |
+| `include/Game.h` | `src/Game.cpp` |
+
+New classes: add both files and register in `build.bat` + `CMakeLists.txt`.
+
+## Includes
+
+```cpp
+// Headers: own guard first, then STL
+#include "Board.h"
+#include <vector>
+#include <string>
+
+// Sources: own header first, then STL, then iostream if needed
+#include "Game.h"
+#include <iostream>
+```
+
+## Patterns in this codebase
+
+```cpp
+// ✅ Bounds before access
+if (!board.isWithinBounds(pos)) return;
+
+// ✅ Parse with trim + istringstream (see main.cpp, Board.cpp)
+std::string cleanLine = trim(lines[index]);
+std::istringstream iss(cleanLine);
+
+// ✅ Errors to stdout, return false from setup parsers
+std::cout << "ERROR UNKNOWN_TOKEN\n";
+return false;
+```
+
+## Avoid
+
+- Raw pointers for ownership; use `std::vector`, `std::string`
+- Duplicating `trim()` — exists in both `main.cpp` and `Board.cpp` (extract only if asked)
+- Changing public command protocol without explicit request
