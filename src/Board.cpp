@@ -54,6 +54,31 @@ bool Board::loadFromLines(const std::vector<std::string>& lines, size_t& i) {
     return true;
 }
 
+Position Board::pixelToCell(int x, int y) const {
+    return { y / CELL_SIZE, x / CELL_SIZE };
+}
+
+bool Board::isWithinBounds(const Position& pos) const {
+    return pos.row >= 0 && pos.row < rows && pos.col >= 0 && pos.col < cols;
+}
+
+std::string Board::getCell(const Position& pos) const {
+    return grid[pos.row][pos.col];
+}
+
+void Board::setCell(const Position& pos, const std::string& val) {
+    grid[pos.row][pos.col] = val;
+}
+
+bool Board::isEmpty(const Position& pos) const {
+    return grid[pos.row][pos.col] == ".";
+}
+
+bool Board::isFriendly(const Position& pos, char color) const {
+    if (isEmpty(pos)) return false;
+    return grid[pos.row][pos.col][0] == color;
+}
+
 void Board::print() const {
     for (const auto& r : grid) {
         for (size_t j = 0; j < r.size(); j++) {
