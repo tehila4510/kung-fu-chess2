@@ -13,7 +13,7 @@ if not exist "%GPP%" (
 
 if not exist build mkdir build
 
-set COMMON_FLAGS=-std=c++17 -Iinclude -Wall -Wextra -Wpedantic
+set COMMON_FLAGS=-std=c++17 -Iinclude -Itests -Wall -Wextra -Wpedantic
 set APP_SOURCES=src\main.cpp src\Board.cpp src\Game.cpp src\MoveRules.cpp
 set TEST_SOURCES=tests\test_main.cpp tests\BoardTest.cpp tests\MoveRulesTest.cpp tests\GameTest.cpp src\Board.cpp src\Game.cpp src\MoveRules.cpp
 

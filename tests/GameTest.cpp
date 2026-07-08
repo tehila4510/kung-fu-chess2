@@ -1,4 +1,4 @@
-#include "TestFramework.h"
+#include "doctest.h"
 #include "Game.h"
 
 #include <string>
@@ -18,12 +18,12 @@ static Game makeGame(const std::vector<std::string>& rows) {
 static int cellX(int col) { return col * 100 + 50; }
 static int cellY(int row) { return row * 100 + 50; }
 
-void testGameSetupSuccess() {
+TEST_CASE("Game.setupSuccess") {
     Game game = makeGame({". wK . .", ". . . ."});
-    ASSERT_EQ("wK", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
 }
 
-void testGameSetupFailure() {
+TEST_CASE("Game.setupFailure") {
     std::vector<std::string> lines = {
         "Board:",
         ". bad . .",
@@ -31,91 +31,77 @@ void testGameSetupFailure() {
     };
     Game game;
     size_t index = 0;
-    ASSERT_FALSE(game.setup(lines, index));
+    CHECK_FALSE(game.setup(lines, index));
 }
 
-void testGameSelectPiece() {
+TEST_CASE("Game.selectPiece") {
     Game game = makeGame({". wK . .", ". . . ."});
     game.handleClick(cellX(1), cellY(0));
-    ASSERT_TRUE(game.isPieceSelected());
-    ASSERT_EQ(0, game.getSelectedPosition().row);
-    ASSERT_EQ(1, game.getSelectedPosition().col);
+    CHECK(game.isPieceSelected());
+    CHECK_EQ(0, game.getSelectedPosition().row);
+    CHECK_EQ(1, game.getSelectedPosition().col);
 }
 
-void testGameClickEmptyWithoutSelection() {
+TEST_CASE("Game.clickEmptyWithoutSelection") {
     Game game = makeGame({". wK . .", ". . . ."});
     game.handleClick(cellX(0), cellY(0));
-    ASSERT_FALSE(game.isPieceSelected());
+    CHECK_FALSE(game.isPieceSelected());
 }
 
-void testGameClickOutOfBounds() {
+TEST_CASE("Game.clickOutOfBounds") {
     Game game = makeGame({". wK . ."});
     game.handleClick(cellX(1), cellY(0));
-    ASSERT_TRUE(game.isPieceSelected());
+    CHECK(game.isPieceSelected());
     game.handleClick(9999, 9999);
-    ASSERT_EQ("wK", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
 }
 
-void testGameLegalKingMove() {
+TEST_CASE("Game.legalKingMove") {
     Game game = makeGame({". wK . .", ". . . ."});
     game.handleClick(cellX(1), cellY(0));
     game.handleClick(cellX(2), cellY(0));
-    ASSERT_EQ(".", game.getBoard().getCell({0, 1}));
-    ASSERT_EQ("wK", game.getBoard().getCell({0, 2}));
-    ASSERT_FALSE(game.isPieceSelected());
+    CHECK_EQ(".", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wK", game.getBoard().getCell({0, 2}));
+    CHECK_FALSE(game.isPieceSelected());
 }
 
-void testGameIllegalKingMoveIgnored() {
+TEST_CASE("Game.illegalKingMoveIgnored") {
     Game game = makeGame({". wK . .", ". . . ."});
     game.handleClick(cellX(1), cellY(0));
     game.handleClick(cellX(3), cellY(0));
-    ASSERT_EQ("wK", game.getBoard().getCell({0, 1}));
-    ASSERT_EQ(".", game.getBoard().getCell({0, 3}));
-    ASSERT_TRUE(game.isPieceSelected());
+    CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
+    CHECK_EQ(".", game.getBoard().getCell({0, 3}));
+    CHECK(game.isPieceSelected());
 }
 
-void testGameRookDiagonalIgnored() {
+TEST_CASE("Game.rookDiagonalIgnored") {
     Game game = makeGame({"wR . . .", ". . . ."});
     game.handleClick(cellX(0), cellY(0));
     game.handleClick(cellX(1), cellY(1));
-    ASSERT_EQ("wR", game.getBoard().getCell({0, 0}));
-    ASSERT_EQ(".", game.getBoard().getCell({1, 1}));
+    CHECK_EQ("wR", game.getBoard().getCell({0, 0}));
+    CHECK_EQ(".", game.getBoard().getCell({1, 1}));
 }
 
-void testGameReselectFriendlyPiece() {
+TEST_CASE("Game.reselectFriendlyPiece") {
     Game game = makeGame({"wR wN . .", ". . . ."});
     game.handleClick(cellX(0), cellY(0));
     game.handleClick(cellX(1), cellY(0));
-    ASSERT_TRUE(game.isPieceSelected());
-    ASSERT_EQ(0, game.getSelectedPosition().row);
-    ASSERT_EQ(1, game.getSelectedPosition().col);
+    CHECK(game.isPieceSelected());
+    CHECK_EQ(0, game.getSelectedPosition().row);
+    CHECK_EQ(1, game.getSelectedPosition().col);
 }
 
-void testGameCaptureEnemyPiece() {
+TEST_CASE("Game.captureEnemyPiece") {
     Game game = makeGame({"wR . bQ .", ". . . ."});
     game.handleClick(cellX(0), cellY(0));
     game.handleClick(cellX(2), cellY(0));
-    ASSERT_EQ(".", game.getBoard().getCell({0, 0}));
-    ASSERT_EQ("wR", game.getBoard().getCell({0, 2}));
+    CHECK_EQ(".", game.getBoard().getCell({0, 0}));
+    CHECK_EQ("wR", game.getBoard().getCell({0, 2}));
 }
 
-void testGameWait() {
+TEST_CASE("Game.wait") {
     Game game = makeGame({". wK . ."});
     game.handleWait(500);
     game.handleWait(250);
-    ASSERT_EQ(750, game.getGameClockMs());
-}
-
-void registerGameTests() {
-    runTest("Game.setupSuccess", testGameSetupSuccess);
-    runTest("Game.setupFailure", testGameSetupFailure);
-    runTest("Game.selectPiece", testGameSelectPiece);
-    runTest("Game.clickEmptyWithoutSelection", testGameClickEmptyWithoutSelection);
-    runTest("Game.clickOutOfBounds", testGameClickOutOfBounds);
-    runTest("Game.legalKingMove", testGameLegalKingMove);
-    runTest("Game.illegalKingMoveIgnored", testGameIllegalKingMoveIgnored);
-    runTest("Game.rookDiagonalIgnored", testGameRookDiagonalIgnored);
-    runTest("Game.reselectFriendlyPiece", testGameReselectFriendlyPiece);
-    runTest("Game.captureEnemyPiece", testGameCaptureEnemyPiece);
-    runTest("Game.wait", testGameWait);
+    CHECK_EQ(750, game.getGameClockMs());
 }

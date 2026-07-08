@@ -1,6 +1,7 @@
-#include "TestFramework.h"
+#include "doctest.h"
 #include "Board.h"
 
+#include <iostream>
 #include <sstream>
 #include <streambuf>
 #include <string>
@@ -37,16 +38,16 @@ static std::string captureSetupOutput(const std::vector<std::string>& lines) {
     return buffer.str();
 }
 
-void testBoardLoadValid() {
+TEST_CASE("Board.loadValid") {
     Board board = loadBoardFromRows({". wK . .", ". . . ."});
-    ASSERT_EQ(".", board.getCell({0, 0}));
-    ASSERT_EQ("wK", board.getCell({0, 1}));
-    ASSERT_TRUE(board.isWithinBounds({0, 0}));
-    ASSERT_TRUE(board.isWithinBounds({1, 3}));
-    ASSERT_FALSE(board.isWithinBounds({2, 0}));
+    CHECK_EQ(".", board.getCell({0, 0}));
+    CHECK_EQ("wK", board.getCell({0, 1}));
+    CHECK(board.isWithinBounds({0, 0}));
+    CHECK(board.isWithinBounds({1, 3}));
+    CHECK_FALSE(board.isWithinBounds({2, 0}));
 }
 
-void testBoardUnknownToken() {
+TEST_CASE("Board.unknownToken") {
     std::vector<std::string> lines = {
         "Board:",
         ". xx . .",
@@ -54,11 +55,11 @@ void testBoardUnknownToken() {
     };
     size_t index = 0;
     Board board;
-    ASSERT_FALSE(board.loadFromLines(lines, index));
-    ASSERT_EQ("ERROR UNKNOWN_TOKEN\n", captureSetupOutput(lines));
+    CHECK_FALSE(board.loadFromLines(lines, index));
+    CHECK_EQ("ERROR UNKNOWN_TOKEN\n", captureSetupOutput(lines));
 }
 
-void testBoardRowWidthMismatch() {
+TEST_CASE("Board.rowWidthMismatch") {
     std::vector<std::string> lines = {
         "Board:",
         ". wK . .",
@@ -67,44 +68,34 @@ void testBoardRowWidthMismatch() {
     };
     size_t index = 0;
     Board board;
-    ASSERT_FALSE(board.loadFromLines(lines, index));
-    ASSERT_EQ("ERROR ROW_WIDTH_MISMATCH\n", captureSetupOutput(lines));
+    CHECK_FALSE(board.loadFromLines(lines, index));
+    CHECK_EQ("ERROR ROW_WIDTH_MISMATCH\n", captureSetupOutput(lines));
 }
 
-void testBoardPixelToCell() {
+TEST_CASE("Board.pixelToCell") {
     Board board = loadBoardFromRows({". . ."});
     Position pos = board.pixelToCell(250, 150);
-    ASSERT_EQ(1, pos.row);
-    ASSERT_EQ(2, pos.col);
+    CHECK_EQ(1, pos.row);
+    CHECK_EQ(2, pos.col);
 }
 
-void testBoardCellAccessAndEmptiness() {
+TEST_CASE("Board.cellAccessAndEmptiness") {
     Board board = loadBoardFromRows({"wR . bQ"});
-    ASSERT_FALSE(board.isEmpty({0, 0}));
-    ASSERT_TRUE(board.isEmpty({0, 1}));
+    CHECK_FALSE(board.isEmpty({0, 0}));
+    CHECK(board.isEmpty({0, 1}));
     board.setCell({0, 1}, "wN");
-    ASSERT_EQ("wN", board.getCell({0, 1}));
+    CHECK_EQ("wN", board.getCell({0, 1}));
 }
 
-void testBoardFriendly() {
+TEST_CASE("Board.friendly") {
     Board board = loadBoardFromRows({"wR bQ wB"});
-    ASSERT_TRUE(board.isFriendly({0, 0}, 'w'));
-    ASSERT_TRUE(board.isFriendly({0, 2}, 'w'));
-    ASSERT_TRUE(board.isFriendly({0, 1}, 'b'));
-    ASSERT_FALSE(board.isFriendly({0, 1}, 'w'));
+    CHECK(board.isFriendly({0, 0}, 'w'));
+    CHECK(board.isFriendly({0, 2}, 'w'));
+    CHECK(board.isFriendly({0, 1}, 'b'));
+    CHECK_FALSE(board.isFriendly({0, 1}, 'w'));
 }
 
-void testBoardPrint() {
+TEST_CASE("Board.print") {
     Board board = loadBoardFromRows({"wK .", ". bQ"});
-    ASSERT_EQ("wK .\n. bQ\n", captureBoardPrint(board));
-}
-
-void registerBoardTests() {
-    runTest("Board.loadValid", testBoardLoadValid);
-    runTest("Board.unknownToken", testBoardUnknownToken);
-    runTest("Board.rowWidthMismatch", testBoardRowWidthMismatch);
-    runTest("Board.pixelToCell", testBoardPixelToCell);
-    runTest("Board.cellAccessAndEmptiness", testBoardCellAccessAndEmptiness);
-    runTest("Board.friendly", testBoardFriendly);
-    runTest("Board.print", testBoardPrint);
+    CHECK_EQ("wK .\n. bQ\n", captureBoardPrint(board));
 }
