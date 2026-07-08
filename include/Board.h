@@ -27,6 +27,7 @@ public:
     void setCell(const Position& pos, const std::string& val);
     bool isFriendly(const Position& pos, char color) const;
     bool isEmpty(const Position& pos) const;
+    int getRowCount() const { return rows; }
 };
 
 #endif

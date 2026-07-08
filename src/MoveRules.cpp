@@ -41,17 +41,39 @@ static bool isValidKnight(int dr, int dc) {
     return (adr == 2 && adc == 1) || (adr == 1 && adc == 2);
 }
 
+static bool isPawnInitialRow(int row, char color, int rows) {
+    if (color == 'w') {
+        if (row == 1) {
+            return true;
+        }
+        return rows >= 4 && row == rows - 1;
+    }
+    if (row == 6) {
+        return true;
+    }
+    return rows >= 4 && row == 0;
+}
+
 static bool isValidPawnMove(const Board& board, const Position& from, const Position& to, char color) {
     const int dr = to.row - from.row;
     const int dc = to.col - from.col;
     const int forward = (color == 'w') ? -1 : 1;
+    const int rows = board.getRowCount();
 
-    if (dc == 0 && dr == forward && board.isEmpty(to)) {
+    if (dr == forward && std::abs(dc) == 1) {
+        return !board.isEmpty(to);
+    }
+
+    if (dc != 0) {
+        return false;
+    }
+
+    if (dr == forward && board.isEmpty(to)) {
         return true;
     }
 
-    if (std::abs(dc) == 1 && dr == forward && !board.isEmpty(to)) {
-        return true;
+    if (isPawnInitialRow(from.row, color, rows) && dr == 2 * forward && board.isEmpty(to)) {
+        return isPathClear(board, from, to);
     }
 
     return false;

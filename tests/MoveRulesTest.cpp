@@ -148,3 +148,134 @@ TEST_CASE("MoveRules.pawnBlockedForwardInvalid") {
     Board board = loadBoardFromRows({"wR . .", "wP . .", ". . ."});
     CHECK_FALSE(isValidMove(board, {1, 0}, {0, 0}));
 }
+
+TEST_CASE("MoveRules.pawnInitialRowOneForwardWhite") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . .", ". . . ."});
+    CHECK(isValidMove(board, {1, 0}, {0, 0}));
+    CHECK_FALSE(isValidMove(board, {1, 0}, {2, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowOneForwardBlack") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", ". . . ."
+    });
+    CHECK(isValidMove(board, {6, 0}, {7, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowTwoForwardBlackLegal") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", ". . . .", ". . . ."
+    });
+    CHECK(isValidMove(board, {6, 0}, {8, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowTwoForwardBlackBlockedPath") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", "wR . . .", ". . . ."
+    });
+    CHECK_FALSE(isValidMove(board, {6, 0}, {8, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowTwoForwardBlackDestinationBlocked") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", ". . . .", "wR . . ."
+    });
+    CHECK_FALSE(isValidMove(board, {6, 0}, {8, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowTwoForwardWhiteOutOfBounds") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {1, 0}, {-1, 0}));
+}
+
+TEST_CASE("MoveRules.pawnOneForwardNotInitialRowWhite") {
+    Board board = loadBoardFromRows({". . . .", ". . . .", "wP . . .", ". . . ."});
+    CHECK(isValidMove(board, {2, 0}, {1, 0}));
+}
+
+TEST_CASE("MoveRules.pawnOneForwardNotInitialRowBlack") {
+    Board board = loadBoardFromRows({". . . .", "bP . . .", ". . . .", ". . . ."});
+    CHECK(isValidMove(board, {1, 0}, {2, 0}));
+}
+
+TEST_CASE("MoveRules.pawnTwoForwardNotFromInitialRowInvalid") {
+    Board board = loadBoardFromRows({". . . .", ". . . .", "wP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {2, 0}, {0, 0}));
+}
+
+TEST_CASE("MoveRules.pawnTwoForwardBlackNotFromInitialRowInvalid") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", "bP . . .", ". . . .", ". . . ."
+    });
+    CHECK_FALSE(isValidMove(board, {5, 0}, {7, 0}));
+}
+
+TEST_CASE("MoveRules.pawnBackwardMoveWhiteInvalid") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {1, 0}, {2, 0}));
+}
+
+TEST_CASE("MoveRules.pawnBackwardMoveBlackInvalid") {
+    Board board = loadBoardFromRows({". . . .", "bP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {1, 0}, {0, 0}));
+}
+
+TEST_CASE("MoveRules.pawnSidewaysMoveInvalid") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {1, 0}, {1, 1}));
+    CHECK_FALSE(isValidMove(board, {1, 0}, {1, 2}));
+}
+
+TEST_CASE("MoveRules.pawnThreeForwardInvalid") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", ". . . .",
+        ". . . .", ". . . ."
+    });
+    CHECK_FALSE(isValidMove(board, {6, 0}, {9, 0}));
+}
+
+TEST_CASE("MoveRules.pawnBlackDiagonalCapture") {
+    Board board = loadBoardFromRows({". . .", ". bP .", "wN . ."});
+    CHECK(isValidMove(board, {1, 1}, {2, 0}));
+
+    Board boardRight = loadBoardFromRows({". . .", ". bP .", ". . wN"});
+    CHECK(isValidMove(boardRight, {1, 1}, {2, 2}));
+}
+
+TEST_CASE("MoveRules.pawnDiagonalWrongDirectionInvalid") {
+    Board board = loadBoardFromRows({". . .", "bN . .", ". wP .", ". . ."});
+    CHECK_FALSE(isValidMove(board, {2, 1}, {3, 0}));
+    CHECK_FALSE(isValidMove(board, {2, 1}, {3, 2}));
+}
+
+TEST_CASE("MoveRules.pawnDiagonalCaptureBothDirections") {
+    Board board = loadBoardFromRows({"bN . bR", ". wP .", ". . ."});
+    CHECK(isValidMove(board, {1, 1}, {0, 0}));
+    CHECK(isValidMove(board, {1, 1}, {0, 2}));
+}
+
+TEST_CASE("MoveRules.pawnStayInPlaceInvalid") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {1, 0}, {1, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowCanChooseOneOrTwoBlack") {
+    Board board = loadBoardFromRows({
+        ". . . .", ". . . .", ". . . .", ". . . .",
+        ". . . .", ". . . .", "bP . . .", ". . . .", ". . . ."
+    });
+    CHECK(isValidMove(board, {6, 0}, {7, 0}));
+    CHECK(isValidMove(board, {6, 0}, {8, 0}));
+}
+
+TEST_CASE("MoveRules.pawnInitialRowOneForwardWhiteWhenTwoWouldBeOutOfBounds") {
+    Board board = loadBoardFromRows({". . . .", "wP . . .", ". . . ."});
+    CHECK(isValidMove(board, {1, 0}, {0, 0}));
+    CHECK_FALSE(isValidMove(board, {1, 0}, {-1, 0}));
+}

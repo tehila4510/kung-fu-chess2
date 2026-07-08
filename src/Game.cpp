@@ -41,6 +41,38 @@ bool Game::hasMoveInFlight() const {
     return activeMove.isActive && gameClockMs < activeMove.arrivalTime;
 }
 
+bool Game::hasMoveArrived() const {
+    return activeMove.isActive && gameClockMs >= activeMove.arrivalTime;
+}
+
+static std::string promotePawnIfNeeded(const std::string& piece, const Position& to, int lastRow) {
+    if (piece.size() == 2 && piece[1] == 'P') {
+        const char color = piece[0];
+        if ((color == 'w' && to.row == 0) || (color == 'b' && to.row == lastRow)) {
+            return std::string(1, color) + 'Q';
+        }
+    }
+    return piece;
+}
+
+void Game::applyArrivedMove() {
+    const std::string capturedPiece = board.getCell(activeMove.to);
+    const int lastRow = board.getRowCount() - 1;
+    const std::string pieceToPlace = promotePawnIfNeeded(activeMove.piece, activeMove.to, lastRow);
+
+    board.setCell(activeMove.to, pieceToPlace);
+    board.setCell(activeMove.from, ".");
+    endGameIfKingCaptured(capturedPiece);
+}
+
+void Game::endGameIfKingCaptured(const std::string& capturedPiece) {
+    if (capturedPiece.size() == 2 && capturedPiece[1] == 'K') {
+        isGameOver = true;
+        selections[0].active = false;
+        selections[1].active = false;
+    }
+}
+
 void Game::handleClick(int x, int y) {
     if (isGameOver || hasMoveInFlight()) {
         return;
@@ -120,18 +152,10 @@ void Game::handleMoveRequest(const Position& from, const Position& to, char play
 void Game::handleWait(int ms) {
     gameClockMs += ms;
 
-    if (activeMove.isActive && gameClockMs >= activeMove.arrivalTime) {
-        const std::string capturedPiece = board.getCell(activeMove.to);
-        board.setCell(activeMove.to, activeMove.piece);
-        board.setCell(activeMove.from, ".");
-        if (capturedPiece.size() == 2 && capturedPiece[1] == 'K') {
-            isGameOver = true;
-            selections[0].active = false;
-            selections[1].active = false;
-        }
+    if (hasMoveArrived()) {
+        applyArrivedMove();
         activeMove.isActive = false;
     }
-
 }
 
 void Game::handlePrintBoard() const {

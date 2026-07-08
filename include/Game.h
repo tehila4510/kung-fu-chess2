@@ -23,7 +23,7 @@ private:
     PlayerSelection selections[2]; // 0=white, 1=black
     ActiveMove activeMove;
     bool isGameOver = false;
-    
+
     static bool isValidPlayerColor(char playerColor);
     static int colorToIndex(char playerColor);
     PlayerSelection& selectionFor(char playerColor);
@@ -33,6 +33,9 @@ private:
     void handleMoveRequest(const Position& from, const Position& to, char playerColor);
     char resolveClickColor(const Position& pos) const;
     bool hasMoveInFlight() const;
+    bool hasMoveArrived() const;
+    void applyArrivedMove();
+    void endGameIfKingCaptured(const std::string& capturedPiece);
 
 public:
     bool setup(const std::vector<std::string>& lines, size_t& index);
