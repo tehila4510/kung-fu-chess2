@@ -41,10 +41,9 @@ int main() {
         iss >> cmd;
 
         if (cmd == "click") {
-            char color;
             int x, y;
-            if (iss >> color >> x >> y) {
-                game.handleClick(x, y, color);
+            if (iss >> x >> y) {
+                game.handleClick(x, y);
             }
         } else if (cmd == "wait") {
             int ms;

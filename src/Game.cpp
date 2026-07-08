@@ -22,6 +22,28 @@ bool Game::setup(const std::vector<std::string>& lines, size_t& index) {
     return board.loadFromLines(lines, index);
 }
 
+char Game::resolveClickColor(const Position& pos) const {
+    if (isPieceSelected('w')) {
+        return 'w';
+    }
+    if (isPieceSelected('b')) {
+        return 'b';
+    }
+    if (!board.isEmpty(pos)) {
+        return board.getCell(pos)[0];
+    }
+    return '\0';
+}
+
+void Game::handleClick(int x, int y) {
+    Position pos = board.pixelToCell(x, y);
+    const char playerColor = resolveClickColor(pos);
+    if (playerColor == '\0') {
+        return;
+    }
+    handlePlayerClick(pos, playerColor);
+}
+
 void Game::handleClick(int x, int y, char playerColor) {
     if (!isValidPlayerColor(playerColor)) {
         return;

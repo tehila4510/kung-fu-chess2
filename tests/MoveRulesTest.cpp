@@ -16,7 +16,7 @@ static Board loadBoardFromRows(const std::vector<std::string>& rows) {
 }
 
 TEST_CASE("MoveRules.kingLegal") {
-    Board board = loadBoardFromRows({". wK . ."});
+    Board board = loadBoardFromRows({". wK . .", ". . . ."});
     CHECK(isValidMove(board, {0, 1}, {0, 2}));
     CHECK(isValidMove(board, {0, 1}, {1, 2}));
 }
@@ -34,7 +34,7 @@ TEST_CASE("MoveRules.rookLegal") {
 }
 
 TEST_CASE("MoveRules.rookIllegal") {
-    Board board = loadBoardFromRows({"wR . . .", ". . . ."});
+    Board board = loadBoardFromRows({"wR . . .", ". . . .", ". . . ."});
     CHECK_FALSE(isValidMove(board, {0, 0}, {1, 1}));
     CHECK_FALSE(isValidMove(board, {0, 0}, {2, 2}));
 }
@@ -50,7 +50,7 @@ TEST_CASE("MoveRules.bishopLegal") {
 }
 
 TEST_CASE("MoveRules.bishopIllegal") {
-    Board board = loadBoardFromRows({"wB . . .", ". . . ."});
+    Board board = loadBoardFromRows({"wB . . .", ". . . .", ". . . ."});
     CHECK_FALSE(isValidMove(board, {0, 0}, {0, 2}));
     CHECK_FALSE(isValidMove(board, {0, 0}, {2, 0}));
 }
@@ -61,13 +61,13 @@ TEST_CASE("MoveRules.bishopBlockedPath") {
 }
 
 TEST_CASE("MoveRules.queenLegal") {
-    Board board = loadBoardFromRows({". wQ . .", ". . . ."});
+    Board board = loadBoardFromRows({". wQ . .", ". . . .", ". . . ."});
     CHECK(isValidMove(board, {0, 1}, {0, 3}));
     CHECK(isValidMove(board, {0, 1}, {2, 3}));
 }
 
 TEST_CASE("MoveRules.queenIllegal") {
-    Board board = loadBoardFromRows({". wQ . .", ". . . ."});
+    Board board = loadBoardFromRows({". wQ . .", ". . . .", ". . . ."});
     CHECK_FALSE(isValidMove(board, {0, 1}, {2, 2}));
 }
 
@@ -86,4 +86,25 @@ TEST_CASE("MoveRules.knightIllegal") {
 TEST_CASE("MoveRules.emptySourceInvalid") {
     Board board = loadBoardFromRows({". . . ."});
     CHECK_FALSE(isValidMove(board, {0, 0}, {0, 1}));
+}
+
+TEST_CASE("MoveRules.friendlyTargetInvalid") {
+    Board board = loadBoardFromRows({"wP wR . .", ". . . ."}); 
+    CHECK_FALSE(isValidMove(board, {0, 0}, {0, 1}));
+}
+
+TEST_CASE("MoveRules.outOfBoundsInvalid") {
+    Board board = loadBoardFromRows({". wK . .", ". . . ."});
+    CHECK_FALSE(isValidMove(board, {0, 1}, {5, 5}));
+    CHECK_FALSE(isValidMove(board, {5, 5}, {0, 1}));
+}
+
+TEST_CASE("MoveRules.knightJumpsOverBlockers") {
+    Board board = loadBoardFromRows({"wN wP .", "wP . .", ". . ."});
+    CHECK(isValidMove(board, {0, 0}, {2, 1}));
+}
+
+TEST_CASE("MoveRules.rookCapturesEnemyAtDestination") {
+    Board board = loadBoardFromRows({"wR . bR"});
+    CHECK(isValidMove(board, {0, 0}, {0, 2}));
 }

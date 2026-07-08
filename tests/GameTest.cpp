@@ -136,3 +136,56 @@ TEST_CASE("Game.wait") {
     game.handleWait(250);
     CHECK_EQ(750, game.getGameClockMs());
 }
+
+TEST_CASE("Game.handleClickSelectsOwnPiece") {
+    Game game = makeGame({". wK . .", ". . . ."});
+    game.handleClick(150, 50);
+    CHECK(game.isPieceSelected('w'));
+    CHECK_EQ(0, game.getSelectedPosition('w').row);
+    CHECK_EQ(1, game.getSelectedPosition('w').col);
+}
+
+TEST_CASE("Game.handleClickMoveToEmpty") {
+    Game game = makeGame({". wK . .", ". . . ."});
+    game.handleClick(150, 50);
+    game.handleClick(250, 50);
+    CHECK_EQ(".", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wK", game.getBoard().getCell({0, 2}));
+    CHECK_FALSE(game.isPieceSelected('w'));
+}
+
+TEST_CASE("Game.handleClickEmptyWithoutSelectionIgnored") {
+    Game game = makeGame({". wK . .", ". . . ."});
+    game.handleClick(50, 50);
+    CHECK_FALSE(game.isPieceSelected('w'));
+}
+
+TEST_CASE("Game.handleClickCaptureUsesSelectionColor") {
+    Game game = makeGame({"wR . bR"});
+    game.handleClick(50, 50);
+    game.handleClick(250, 50);
+    CHECK_EQ(".", game.getBoard().getCell({0, 0}));
+    CHECK_EQ(".", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wR", game.getBoard().getCell({0, 2}));
+    CHECK_FALSE(game.isPieceSelected('w'));
+}
+
+TEST_CASE("Game.knightJumpsOverBlockers") {
+    Game game = makeGame({"wN wP .", "wP . .", ". . ."});
+    game.handleClick(50, 50);
+    game.handleClick(150, 250);
+    CHECK_EQ(".", game.getBoard().getCell({0, 0}));
+    CHECK_EQ("wP", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wP", game.getBoard().getCell({1, 0}));
+    CHECK_EQ("wN", game.getBoard().getCell({2, 1}));
+    CHECK_FALSE(game.isPieceSelected('w'));
+}
+
+TEST_CASE("Game.rookCapturesEnemyAtDestination") {
+    Game game = makeGame({"wR . bR"});
+    game.handleClick(50, 50);
+    game.handleClick(250, 50);
+    CHECK_EQ(".", game.getBoard().getCell({0, 0}));
+    CHECK_EQ(".", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("wR", game.getBoard().getCell({0, 2}));
+}

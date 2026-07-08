@@ -42,8 +42,16 @@ static bool isValidKnight(int dr, int dc) {
 }
 
 bool isValidMove(const Board& board, const Position& from, const Position& to) {
+    if (!board.isWithinBounds(from) || !board.isWithinBounds(to)) {
+        return false;
+    }
+
     const std::string piece = board.getCell(from);
     if (piece == ".") {
+        return false;
+    }
+
+    if (board.isFriendly(to, piece[0])) {
         return false;
     }
 

@@ -22,9 +22,11 @@ private:
 
     void handleSelectNew(const Position& pos, char playerColor);
     void handleMoveRequest(const Position& from, const Position& to, char playerColor);
+    char resolveClickColor(const Position& pos) const;
 
 public:
     bool setup(const std::vector<std::string>& lines, size_t& index);
+    void handleClick(int x, int y);
     void handleClick(int x, int y, char playerColor);
     void handlePlayerClick(const Position& pos, char playerColor);
     void handleWait(int ms);
