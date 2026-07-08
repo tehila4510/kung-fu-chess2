@@ -15,7 +15,7 @@ if not exist build mkdir build
 
 set COMMON_FLAGS=-std=c++17 -Iinclude -Itests -Wall -Wextra -Wpedantic
 set APP_SOURCES=src\main.cpp src\Board.cpp src\Game.cpp src\MoveRules.cpp
-set TEST_SOURCES=tests\test_main.cpp tests\BoardTest.cpp tests\MoveRulesTest.cpp tests\GameTest.cpp src\Board.cpp src\Game.cpp src\MoveRules.cpp
+set TEST_SOURCES=tests\test_main.cpp tests\TestHelpers.cpp tests\BoardTest.cpp tests\MoveRulesKingTest.cpp tests\MoveRulesRookTest.cpp tests\MoveRulesBishopTest.cpp tests\MoveRulesQueenTest.cpp tests\MoveRulesKnightTest.cpp tests\MoveRulesPawnTest.cpp tests\MoveRulesGeneralTest.cpp tests\GameTest.cpp src\Board.cpp src\Game.cpp src\MoveRules.cpp
 
 if /i "%~1"=="test" (
     "%GPP%" %COMMON_FLAGS% %TEST_SOURCES% -o build\KungFuChessTests.exe

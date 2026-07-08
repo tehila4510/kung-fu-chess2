@@ -22,8 +22,15 @@ add_executable(${PROJECT_NAME} src/main.cpp ${CORE_SOURCES})
 
 add_executable(KungFuChessTests
     tests/test_main.cpp
+    tests/TestHelpers.cpp
     tests/BoardTest.cpp
-    tests/MoveRulesTest.cpp
+    tests/MoveRulesKingTest.cpp
+    tests/MoveRulesRookTest.cpp
+    tests/MoveRulesBishopTest.cpp
+    tests/MoveRulesQueenTest.cpp
+    tests/MoveRulesKnightTest.cpp
+    tests/MoveRulesPawnTest.cpp
+    tests/MoveRulesGeneralTest.cpp
     tests/GameTest.cpp
     ${CORE_SOURCES}
 )
