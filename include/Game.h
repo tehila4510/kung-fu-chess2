@@ -5,25 +5,35 @@
 
 class Game {
 private:
+    struct PlayerSelection {
+        bool active = false;
+        Position pos = {-1, -1};
+    };
+
     Board board;
     long long gameClockMs = 0;
 
-    bool hasSelection = false;
-    Position selectedPos = {-1, -1};
+    PlayerSelection selections[2]; // 0=white, 1=black
 
-    void handleSelectNew(const Position& pos);
-    void handleMoveRequest(const Position& from, const Position& to);
+    static bool isValidPlayerColor(char playerColor);
+    static int colorToIndex(char playerColor);
+    PlayerSelection& selectionFor(char playerColor);
+    const PlayerSelection& selectionFor(char playerColor) const;
+
+    void handleSelectNew(const Position& pos, char playerColor);
+    void handleMoveRequest(const Position& from, const Position& to, char playerColor);
 
 public:
     bool setup(const std::vector<std::string>& lines, size_t& index);
-    void handleClick(int x, int y);
+    void handleClick(int x, int y, char playerColor);
+    void handlePlayerClick(const Position& pos, char playerColor);
     void handleWait(int ms);
     void handlePrintBoard() const;
 
     const Board& getBoard() const { return board; }
     long long getGameClockMs() const { return gameClockMs; }
-    bool isPieceSelected() const { return hasSelection; }
-    Position getSelectedPosition() const { return selectedPos; }
+    bool isPieceSelected(char playerColor) const;
+    Position getSelectedPosition(char playerColor) const;
 };
 
 #endif

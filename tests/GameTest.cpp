@@ -15,9 +15,6 @@ static Game makeGame(const std::vector<std::string>& rows) {
     return game;
 }
 
-static int cellX(int col) { return col * 100 + 50; }
-static int cellY(int row) { return row * 100 + 50; }
-
 TEST_CASE("Game.setupSuccess") {
     Game game = makeGame({". wK . .", ". . . ."});
     CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
@@ -36,67 +33,101 @@ TEST_CASE("Game.setupFailure") {
 
 TEST_CASE("Game.selectPiece") {
     Game game = makeGame({". wK . .", ". . . ."});
-    game.handleClick(cellX(1), cellY(0));
-    CHECK(game.isPieceSelected());
-    CHECK_EQ(0, game.getSelectedPosition().row);
-    CHECK_EQ(1, game.getSelectedPosition().col);
+    game.handlePlayerClick({0, 1}, 'w');
+    CHECK(game.isPieceSelected('w'));
+    CHECK_EQ(0, game.getSelectedPosition('w').row);
+    CHECK_EQ(1, game.getSelectedPosition('w').col);
 }
 
 TEST_CASE("Game.clickEmptyWithoutSelection") {
     Game game = makeGame({". wK . .", ". . . ."});
-    game.handleClick(cellX(0), cellY(0));
-    CHECK_FALSE(game.isPieceSelected());
+    game.handlePlayerClick({0, 0}, 'w');
+    CHECK_FALSE(game.isPieceSelected('w'));
 }
 
 TEST_CASE("Game.clickOutOfBounds") {
     Game game = makeGame({". wK . ."});
-    game.handleClick(cellX(1), cellY(0));
-    CHECK(game.isPieceSelected());
-    game.handleClick(9999, 9999);
+    game.handlePlayerClick({0, 1}, 'w');
+    CHECK(game.isPieceSelected('w'));
+    game.handlePlayerClick({99, 99}, 'w');
     CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
 }
 
 TEST_CASE("Game.legalKingMove") {
     Game game = makeGame({". wK . .", ". . . ."});
-    game.handleClick(cellX(1), cellY(0));
-    game.handleClick(cellX(2), cellY(0));
+    game.handlePlayerClick({0, 1}, 'w');
+    game.handlePlayerClick({0, 2}, 'w');
     CHECK_EQ(".", game.getBoard().getCell({0, 1}));
     CHECK_EQ("wK", game.getBoard().getCell({0, 2}));
-    CHECK_FALSE(game.isPieceSelected());
+    CHECK_FALSE(game.isPieceSelected('w'));
 }
 
 TEST_CASE("Game.illegalKingMoveIgnored") {
     Game game = makeGame({". wK . .", ". . . ."});
-    game.handleClick(cellX(1), cellY(0));
-    game.handleClick(cellX(3), cellY(0));
+    game.handlePlayerClick({0, 1}, 'w');
+    game.handlePlayerClick({0, 3}, 'w');
     CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
     CHECK_EQ(".", game.getBoard().getCell({0, 3}));
-    CHECK(game.isPieceSelected());
+    CHECK(game.isPieceSelected('w'));
 }
 
 TEST_CASE("Game.rookDiagonalIgnored") {
     Game game = makeGame({"wR . . .", ". . . ."});
-    game.handleClick(cellX(0), cellY(0));
-    game.handleClick(cellX(1), cellY(1));
+    game.handlePlayerClick({0, 0}, 'w');
+    game.handlePlayerClick({1, 1}, 'w');
     CHECK_EQ("wR", game.getBoard().getCell({0, 0}));
     CHECK_EQ(".", game.getBoard().getCell({1, 1}));
 }
 
 TEST_CASE("Game.reselectFriendlyPiece") {
     Game game = makeGame({"wR wN . .", ". . . ."});
-    game.handleClick(cellX(0), cellY(0));
-    game.handleClick(cellX(1), cellY(0));
-    CHECK(game.isPieceSelected());
-    CHECK_EQ(0, game.getSelectedPosition().row);
-    CHECK_EQ(1, game.getSelectedPosition().col);
+    game.handlePlayerClick({0, 0}, 'w');
+    game.handlePlayerClick({0, 1}, 'w');
+    CHECK(game.isPieceSelected('w'));
+    CHECK_EQ(0, game.getSelectedPosition('w').row);
+    CHECK_EQ(1, game.getSelectedPosition('w').col);
 }
 
 TEST_CASE("Game.captureEnemyPiece") {
     Game game = makeGame({"wR . bQ .", ". . . ."});
-    game.handleClick(cellX(0), cellY(0));
-    game.handleClick(cellX(2), cellY(0));
+    game.handlePlayerClick({0, 0}, 'w');
+    game.handlePlayerClick({0, 2}, 'w');
     CHECK_EQ(".", game.getBoard().getCell({0, 0}));
     CHECK_EQ("wR", game.getBoard().getCell({0, 2}));
+}
+
+TEST_CASE("Game.cannotSelectEnemyPiece") {
+    Game game = makeGame({"bK . . .", ". . . ."});
+    game.handlePlayerClick({0, 0}, 'w');
+    CHECK_FALSE(game.isPieceSelected('w'));
+}
+
+TEST_CASE("Game.independentSelections") {
+    Game game = makeGame({". wK . .", "bK . . ."});
+    game.handlePlayerClick({0, 1}, 'w');
+    game.handlePlayerClick({1, 0}, 'b');
+    CHECK(game.isPieceSelected('w'));
+    CHECK(game.isPieceSelected('b'));
+    CHECK_EQ(1, game.getSelectedPosition('w').col);
+    CHECK_EQ(0, game.getSelectedPosition('b').col);
+}
+
+TEST_CASE("Game.blackCanSelectWhileWhiteHoldsSelection") {
+    Game game = makeGame({". wK . .", "bK . . ."});
+    game.handlePlayerClick({0, 1}, 'w');
+    game.handlePlayerClick({1, 0}, 'b');
+    CHECK(game.isPieceSelected('w'));
+    CHECK(game.isPieceSelected('b'));
+    CHECK_EQ("wK", game.getBoard().getCell({0, 1}));
+    CHECK_EQ("bK", game.getBoard().getCell({1, 0}));
+}
+
+TEST_CASE("Game.invalidPlayerColorIgnored") {
+    Game game = makeGame({". wK . .", ". . . ."});
+    game.handlePlayerClick({0, 1}, 'x');
+    CHECK_FALSE(game.isPieceSelected('w'));
+    CHECK_FALSE(game.isPieceSelected('x'));
+    CHECK_EQ(-1, game.getSelectedPosition('x').row);
 }
 
 TEST_CASE("Game.wait") {
