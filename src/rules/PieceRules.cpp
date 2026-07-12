@@ -50,17 +50,14 @@ void addStepMoves(const Board& board, const Piece& piece,
 constexpr std::array<Step, 4> kRookDirs{{{-1, 0}, {1, 0}, {0, -1}, {0, 1}}};
 constexpr std::array<Step, 4> kBishopDirs{{{-1, -1}, {-1, 1}, {1, -1}, {1, 1}}};
 
+// White pawns move up, so they start on the second-to-last row (rows - 2).
+// Black pawns move down, so they start on row 1 (0-indexed from the top).
+// Both are derived from the current board height, never hardcoded.
 bool isPawnInitialRow(int row, char color, int rows) {
     if (color == 'w') {
-        if (row == 1) {
-            return true;
-        }
-        return rows >= 4 && row == rows - 1;
+        return row == rows - 2;
     }
-    if (row == 6) {
-        return true;
-    }
-    return rows >= 4 && row == 0;
+    return row == 1;
 }
 
 class NullRule : public IPieceRule {
