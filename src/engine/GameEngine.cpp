@@ -16,10 +16,16 @@ MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
     }
 
     const std::string mover = board.getCell(from);
-    // A player is disabled only while their own piece is in flight; the
-    // opponent may move at the same time.
-    if (!mover.empty() && arbiter.hasActiveMotion(mover[0])) {
-        return { false, "move_in_flight" };
+    if (mover.size() == 2) {
+        const char color = mover[0];
+        // A player is disabled while their own piece is in flight.
+        if (arbiter.hasActiveMotion(color)) {
+            return { false, "move_in_flight" };
+        }
+        const char opponent = color == 'w' ? 'b' : 'w';
+        if (arbiter.hasActiveTravel(opponent)) {
+            return { false, "common_route" };
+        }
     }
 
     const MoveValidation validation = ruleEngine.validateMove(board, from, to);

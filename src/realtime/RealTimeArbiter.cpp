@@ -31,6 +31,11 @@ bool RealTimeArbiter::hasActiveMotion(char color) const {
     return active[colorIndex(color)].has_value();
 }
 
+bool RealTimeArbiter::hasActiveTravel(char color) const {
+    const auto& slot = active[colorIndex(color)];
+    return slot.has_value() && slot->from != slot->to;
+}
+
 void RealTimeArbiter::startMotion(const std::string& piece, const Position& from, const Position& to) {
     // Travel time scales with the king-step distance: one second per cell.
     const long long durationMs = static_cast<long long>(from.chebyshevDistanceTo(to)) * 1000;
@@ -48,9 +53,6 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
     std::vector<ArrivalEvent> arrivals;
     const int lastRow = board.getRowCount() - 1;
 
-    // A jump lands on the same square it left, so a piece that travels into
-    // that square within the same tick must be resolved first; the jumper
-    // then "lands" on top of it and captures it, rather than the reverse.
     auto isJumpLandingHere = [&](const Position& p) {
         for (const auto& slot : active) {
             if (slot && slot->from == slot->to && slot->to == p && clockMs >= slot->arrivalTime) {
@@ -60,10 +62,7 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
         return false;
     };
 
-    // Pass 1: resolve travelling motions (from != to). When two motions land
-    // on the same square in the same tick (a head-on capture), the motion
-    // that started *earlier* must be resolved *last* so it overwrites the
-    // other -- i.e. the piece that set off first wins the race and survives.
+   
     std::array<int, kColorCount> travelOrder{};
     int travelCount = 0;
     for (int i = 0; i < kColorCount; ++i) {
@@ -83,8 +82,6 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
 
         std::string capturedPiece = board.getCell(motion.to);
         if (isJumpLandingHere(motion.to)) {
-            // The defender is airborne, not actually present to be captured;
-            // it will reclaim the square in pass 2 below.
             capturedPiece = ".";
         }
         const std::string pieceToPlace = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
@@ -95,7 +92,6 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
         arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
     }
 
-    // Pass 2: resolve jump landings, capturing anyone now on the square.
     for (auto& slot : active) {
         if (!slot || slot->from != slot->to || clockMs < slot->arrivalTime) {
             continue;

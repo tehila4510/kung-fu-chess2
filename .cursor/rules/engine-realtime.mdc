@@ -12,6 +12,7 @@ alwaysApply: false
 - Public API: `setup`, `requestMove`, `wait`, `snapshot`, `isGameOver`
 - `setup(Board)`: takes an already-parsed board; the engine never parses text. Text → `Board` is `io/BoardParser`'s job (invoked by the composition root)
 - `requestMove`: validate via `RuleEngine`, then delegate motion to arbiter or apply instantly per game rules
+- Concurrency: a color is blocked while its own piece is in flight (`move_in_flight`); it is also blocked while the **opponent** has a travelling piece in flight (`common_route`) — opposite colors never travel concurrently. A stationary jump (`from == to`) does not occupy a route and does not block the opponent
 - `snapshot()`: build immutable `GameSnapshot` for view — no live references to internal state
 
 ```cpp
