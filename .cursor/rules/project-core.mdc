@@ -11,21 +11,31 @@ alwaysApply: true
 - Headers in `include/`, sources in `src/`
 - Build: `.\build.bat` or CMake
 
+## Language
+
+- **All comments must be in English** — never Hebrew or mixed-language comments
+- Identifiers, error strings, and reason codes: English only
+- User-facing stdout protocol stays as defined (`ERROR UNKNOWN_TOKEN`, etc.)
+
 ## Code style
 
+- **Header vs implementation (strict):** `.h` files are headers only (declarations, include guards, `static constexpr` constants, defaulted members); `.cpp` files hold all function/method bodies — never define function bodies inline in a header
 - Include guards: `#ifndef BOARD_H` / `#define BOARD_H` / `#endif`
-- Classes: PascalCase (`Game`, `Board`); methods: camelCase (`handleClick`)
-- Prefer `const` methods and references for read-only params
-- Keep helpers as `static` functions in `.cpp` files when file-local
+- Classes: PascalCase (`GameEngine`, `RuleEngine`); methods: camelCase (`requestMove`)
+- Structs for plain data (`MoveResult`, `Position`); classes for behavior
+- Prefer `const` methods and `const` references for read-only params
+- Keep file-local helpers as `static` functions in `.cpp` files
 
 ## Domain
 
-- Cell tokens: `"."` empty; `"wK"`, `"bQ"` etc. — color (`w`/`b`) + piece (`KQRBNP`)
-- `Board::CELL_SIZE = 100` — pixel coords map via `pixelToCell(x, y)`
-- `Position`: `{ row, col }` with `isValid()` check
+- Cell tokens: `"."` empty; `"wK"`, `"bQ"` — color (`w`/`b`) + piece (`KQRBNP`)
+- `Position`: `{ row, col }` with `isValid()`; always bounds-check before grid access
+- Pixel coords map via `BoardMapper` / `pixelToCell(x, y)` when input layer is used
 
 ## Constraints
 
+- When changes affect project structure, architecture, or conventions — update `agents.mdc`, `AGENTS.md`, and relevant `.cursor/rules/*.mdc` files
 - Minimize diff scope; do not refactor unrelated code
 - Do not add tests or docs unless requested
 - Do not create git commits unless the user asks
+- Register new `.cpp` files in both `build.bat` and `CMakeLists.txt`

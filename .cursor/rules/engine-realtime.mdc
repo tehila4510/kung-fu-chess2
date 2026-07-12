@@ -1,0 +1,31 @@
+---
+description: Engine and realtime layer conventions
+globs: "{include/engine/**,src/engine/**,include/realtime/**,src/realtime/**}"
+alwaysApply: false
+---
+
+# Engine & Realtime
+
+## GameEngine
+
+- Owns `Board`, `RuleEngine`, `RealTimeArbiter`, and `gameOver` flag
+- Public API: `setup`, `requestMove`, `wait`, `snapshot`, `isGameOver`
+- `requestMove`: validate via `RuleEngine`, then delegate motion to arbiter or apply instantly per game rules
+- `snapshot()`: build immutable `GameSnapshot` for view — no live references to internal state
+
+```cpp
+struct MoveResult { bool is_accepted; std::string reason; };
+```
+
+## Realtime
+
+- `Motion`: in-flight piece move with `arrivalTime` on game clock
+- `RealTimeArbiter::advanceTime(ms, board)`: advance clock, resolve arrivals, mutate board on landing
+- Return `std::optional<ArrivalEvent>` when a piece arrives; empty when nothing resolved
+
+## Separation
+
+- Engine coordinates; arbiter handles timing physics
+- Rules layer decides legality **before** motion starts
+- Capture resolution happens at arrival time, not at move request time
+- No stdin/stdout, no pixel coordinates — only grid `Position` values

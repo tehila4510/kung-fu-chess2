@@ -1,0 +1,42 @@
+---
+description: Layered architecture and dependency rules
+alwaysApply: true
+---
+
+# Architecture
+
+## Layers (inner → outer)
+
+| Layer | Path | Responsibility |
+|-------|------|----------------|
+| Model | `model/` | Board grid, `Piece`, `Position`, `GameState` — data only, no I/O |
+| Rules | `rules/` | `IPieceRule` strategies, `RuleEngine` move validation |
+| Realtime | `realtime/` | `Motion`, `RealTimeArbiter` — timed movement and capture resolution |
+| Engine | `engine/` | `GameEngine` — orchestrates model + rules + realtime; no I/O |
+| I/O | `io/` | `BoardParser`, `BoardPrinter` — parse/serialize board text |
+| Input | `input/` | `Controller`, `BoardMapper` — map user events to engine calls |
+| View | `view/` | `Renderer`, `ImageView` — render `GameSnapshot` only |
+| Text tests | `texttests/` | `ScriptParser`, `ScriptRunner` — scripted stdin integration |
+| App | `App`, `main` | Composition root: wire layers, dispatch commands |
+
+## Dependency rule
+
+Dependencies point **inward only**. Outer layers may use inner; inner layers must never include `view/`, `input/`, `io/`, or `main`.
+
+```
+main/App → input/view/io → engine → rules/realtime → model
+```
+
+## Design patterns
+
+- **Strategy**: one `IPieceRule` per piece type; `ruleFor(kind)` factory returns the strategy
+- **DTO**: cross-boundary structs (`MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`) — plain data, no behavior
+- **Facade**: `GameEngine` is the single entry point for game logic from input/I/O layers
+- **Snapshot**: view reads `GameSnapshot`; never mutates `Board` directly
+
+## Adding features
+
+1. Place logic in the correct layer — not in `main`
+2. Expose results via small structs, not raw internal state
+3. Keep abstractions generic: prefer interfaces + factories over `switch` on piece kind
+4. Validate at boundaries; assume nothing about caller intent inside engine

@@ -1,0 +1,98 @@
+---
+description: Primary Cursor agent entry point — read before any task
+alwaysApply: true
+---
+
+# Kung Fu Chess — Cursor Agent Instructions
+
+**Read this file first.** It is the canonical entry point for Cursor Agent in this repo.
+
+## Cursor workflow
+
+1. Identify which architectural layer the task belongs to (see Architecture below)
+2. Apply layer-specific rules from `.cursor/rules/` when editing matching paths
+3. Keep diffs minimal — change only what the task requires
+4. After adding `.cpp` files, update `build.bat` and `CMakeLists.txt`
+5. Verify with `.\build.bat` or `.\build.bat test` when logic changes
+6. If the change affects layout, architecture, layers, build, input protocol, or conventions — update the instruction files to match:
+   - `.cursor/rules/agents.mdc` (primary)
+   - `AGENTS.md` (keep in sync with agents.mdc)
+   - Relevant `.cursor/rules/*.mdc` (e.g. `architecture.mdc`, `model-rules.mdc`)
+7. Do not commit unless the user explicitly asks
+
+### Layer rule files (apply when editing matching files)
+
+| Rule file | Globs |
+|-----------|-------|
+| `cpp-files.mdc` | `src/**`, `include/**` |
+| `model-rules.mdc` | `model/`, `rules/` |
+| `engine-realtime.mdc` | `engine/`, `realtime/` |
+| `io-input-view.mdc` | `io/`, `input/`, `view/`, `texttests/`, `main.cpp`, `App` |
+
+## Stack
+
+- C++17, STL only, no third-party deps
+- Headers in `include/`, sources in `src/`
+- Build: `.\build.bat`, `.\build.bat run`, `.\build.bat test`
+
+## Language
+
+- **All comments must be in English** — never Hebrew or mixed-language comments
+- Identifiers, error strings, and reason codes: English only
+
+## Layout
+
+```
+include/
+├── model/       Board, Piece, Position, GameState
+├── rules/       IPieceRule strategies, RuleEngine
+├── realtime/    Motion, RealTimeArbiter
+├── engine/      GameEngine
+├── io/          BoardParser, BoardPrinter
+├── input/       Controller, BoardMapper
+├── view/        Renderer, ImageView
+├── texttests/   ScriptParser, ScriptRunner
+├── App.h        Composition root
+├── Board.h      (legacy — migrating to model/)
+└── Game.h       (legacy — migrating to engine/)
+```
+
+## Architecture
+
+Dependencies point inward only:
+
+```
+main/App → input/view/io → engine → rules/realtime → model
+```
+
+| Layer | Key types | Responsibility |
+|-------|-----------|----------------|
+| Model | `Board`, `Piece`, `Position`, `GameState` | Grid data, bounds — no I/O or rules |
+| Rules | `IPieceRule`, `RuleEngine` | Move legality via Strategy pattern |
+| Realtime | `Motion`, `RealTimeArbiter` | Timed movement, capture on arrival |
+| Engine | `GameEngine` | Orchestrates model + rules + realtime |
+| I/O | `BoardParser`, `BoardPrinter` | Parse/serialize board text |
+| Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
+| View | `Renderer`, `ImageView` | Render `GameSnapshot` only |
+| App | `App`, `main` | Wire layers; dispatch commands |
+
+### Patterns
+
+- **Strategy**: `IPieceRule` per piece; `ruleFor(kind)` factory
+- **DTO**: `MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`
+- **Facade**: `GameEngine` is the single game-logic entry point
+- **Snapshot**: view never mutates `Board` directly
+
+## Input format (do not change without explicit request)
+
+1. Board rows until `Board:` marker (tokens: `.`, `wK`, `bQ`)
+2. `Commands:` — `click X Y`, `wait MS`, `print board`
+3. Errors to stdout: `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`
+
+## Code style
+
+- Include guards: `#ifndef BOARD_H` / `#define BOARD_H` / `#endif`
+- Classes: PascalCase; methods: camelCase
+- Prefer `const` methods and references for read-only params
+- File-local helpers as `static` in `.cpp` files
+- **Header vs implementation (strict):** `.h` files are headers only — declarations, include guards, `static constexpr` constants, defaulted members. All function/method bodies go in the matching `.cpp`; never define function bodies inline in a header.

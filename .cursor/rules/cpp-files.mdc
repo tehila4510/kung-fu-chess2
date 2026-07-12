@@ -6,45 +6,66 @@ alwaysApply: false
 
 # C++ Conventions
 
-## File pairing
+## File layout
+
+Mirror header paths under `src/`:
 
 | Header | Source |
 |--------|--------|
-| `include/Board.h` | `src/Board.cpp` |
-| `include/Game.h` | `src/Game.cpp` |
+| `include/model/Board.h` | `src/model/Board.cpp` |
+| `include/rules/RuleEngine.h` | `src/rules/RuleEngine.cpp` |
+| `include/engine/GameEngine.h` | `src/engine/GameEngine.cpp` |
 
-New classes: add both files and register in `build.bat` + `CMakeLists.txt`.
+Legacy root files (`Board.h`, `Game.h`) coexist during migration — prefer new layered paths for new code.
+
+## Header vs implementation (strict)
+
+- `.h` files are **headers only**: include guards, includes, type/struct/class declarations, member and free-function declarations, `static constexpr` constants, defaulted special members (`= default`), and member initializers.
+- `.cpp` files hold **all implementations**: every function and method body lives in the matching source file, never inline in the header.
+- Do not define function bodies inside headers — declare in the `.h`, define in the paired `.cpp` (e.g. `Piece::toToken()` is declared in `include/model/Piece.h` and defined in `src/model/Piece.cpp`).
 
 ## Includes
 
 ```cpp
-// Headers: own guard first, then STL
-#include "Board.h"
+// Header: guard, project headers (deepest layer first), then STL
+#include "model/Board.h"
 #include <vector>
 #include <string>
 
-// Sources: own header first, then STL, then iostream if needed
-#include "Game.h"
+// Source: own header first, then project, then STL
+#include "rules/RuleEngine.h"
+#include "model/Piece.h"
 #include <iostream>
 ```
 
-## Patterns in this codebase
+Never include outer-layer headers from inner layers (e.g. `model/` must not include `view/`).
+
+## Comments
 
 ```cpp
-// ✅ Bounds before access
+// BAD — Hebrew comment
+std::string capturedPiece; // "" אם אין אכילה
+
+// GOOD — English only
+std::string capturedPiece; // empty when no capture occurred
+```
+
+## Patterns
+
+```cpp
+// Bounds before access
 if (!board.isWithinBounds(pos)) return;
 
-// ✅ Parse with trim + istringstream (see main.cpp, Board.cpp)
-std::string cleanLine = trim(lines[index]);
-std::istringstream iss(cleanLine);
-
-// ✅ Errors to stdout, return false from setup parsers
+// Parse: trim + istringstream; errors to stdout, return false
 std::cout << "ERROR UNKNOWN_TOKEN\n";
 return false;
+
+// Rule lookup via factory, not inline switches
+const IPieceRule& rule = ruleFor(piece.kind);
 ```
 
 ## Avoid
 
-- Raw pointers for ownership; use `std::vector`, `std::string`
-- Duplicating `trim()` — exists in both `main.cpp` and `Board.cpp` (extract only if asked)
-- Changing public command protocol without explicit request
+- Raw pointers for ownership; use `std::vector`, `std::string`, `std::optional`
+- Business logic in `main.cpp` beyond wiring and command dispatch
+- Exposing mutable `Board&` to view or input layers

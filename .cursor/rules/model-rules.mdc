@@ -1,0 +1,36 @@
+---
+description: Model and rules layer conventions
+globs: "{include/model/**,src/model/**,include/rules/**,src/rules/**}"
+alwaysApply: false
+---
+
+# Model & Rules
+
+## Model (`model/`)
+
+- `Board`: grid storage, bounds, cell get/set — no move-legality logic
+- `Piece`: `{ kind, color }` value type — no virtual methods
+- `Position`: grid coordinates — `isValid()` is necessary but not sufficient; always check board bounds
+- `GameState`: selection, turn, game-over flags — engine-owned aggregate state
+
+Model types must be usable without knowing about realtime, I/O, or rendering.
+
+## Rules (`rules/`)
+
+- Each piece implements `IPieceRule::legalDestinations(board, piece)`
+- `RuleEngine::validateMove` composes: bounds → source nonempty → not friendly dest → piece rule
+- Return `MoveValidation` with machine-readable `reason` strings in English
+
+```cpp
+struct MoveValidation {
+    bool is_valid;
+    std::string reason; // "ok" | "outside_board" | "empty_source" | ...
+};
+```
+
+## Extending piece behavior
+
+1. Add a new class implementing `IPieceRule`
+2. Register it in `ruleFor(char kind)` factory
+3. Add focused unit test under `tests/MoveRules*Test.cpp`
+4. Do not add piece-specific branches inside `RuleEngine`
