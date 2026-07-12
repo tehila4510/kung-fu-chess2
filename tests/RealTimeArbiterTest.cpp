@@ -25,7 +25,7 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         Board board = loadBoard({ "wR . . ." });
         RealTimeArbiter arb;
         CHECK_FALSE(arb.hasActiveMotion());
-        CHECK_FALSE(arb.advanceTime(1000, board).has_value());
+        CHECK(arb.advanceTime(1000, board).empty());
     }
 
     SUBCASE("motion stays in flight until arrival") {
@@ -34,7 +34,7 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         arb.startMotion("wR", { 0, 0 }, { 0, 3 }); // 3 cells -> 3000 ms
         CHECK(arb.hasActiveMotion());
 
-        CHECK_FALSE(arb.advanceTime(2999, board).has_value());
+        CHECK(arb.advanceTime(2999, board).empty());
         CHECK(arb.hasActiveMotion());
         CHECK(board.getCell({ 0, 0 }) == "wR"); // not moved yet
     }
@@ -44,10 +44,10 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         RealTimeArbiter arb;
         arb.startMotion("wR", { 0, 0 }, { 0, 3 });
 
-        auto arrival = arb.advanceTime(3000, board);
-        REQUIRE(arrival.has_value());
-        CHECK(arrival->at == Position{ 0, 3 });
-        CHECK(arrival->capturedPiece == ".");
+        auto arrivals = arb.advanceTime(3000, board);
+        REQUIRE(arrivals.size() == 1);
+        CHECK(arrivals[0].at == Position{ 0, 3 });
+        CHECK(arrivals[0].capturedPiece == ".");
         CHECK(board.getCell({ 0, 3 }) == "wR");
         CHECK(board.getCell({ 0, 0 }) == ".");
         CHECK_FALSE(arb.hasActiveMotion());
@@ -58,9 +58,9 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         RealTimeArbiter arb;
         arb.startMotion("wR", { 0, 0 }, { 0, 3 });
 
-        auto arrival = arb.advanceTime(3000, board);
-        REQUIRE(arrival.has_value());
-        CHECK(arrival->capturedPiece == "bK");
+        auto arrivals = arb.advanceTime(3000, board);
+        REQUIRE(arrivals.size() == 1);
+        CHECK(arrivals[0].capturedPiece == "bK");
         CHECK(board.getCell({ 0, 3 }) == "wR");
     }
 
@@ -71,8 +71,35 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         RealTimeArbiter arb;
         arb.startMotion("wP", { 1, 0 }, { 0, 0 });
 
-        auto arrival = arb.advanceTime(1000, board);
-        REQUIRE(arrival.has_value());
+        auto arrivals = arb.advanceTime(1000, board);
+        REQUIRE(arrivals.size() == 1);
         CHECK(board.getCell({ 0, 0 }) == "wQ");
+    }
+
+    SUBCASE("both colors move simultaneously and resolve together") {
+        Board board = loadBoard({
+            "wR . . .",
+            ". . . bR" });
+        RealTimeArbiter arb;
+        arb.startMotion("wR", { 0, 0 }, { 0, 2 }); // 2 cells -> 2000 ms
+        arb.startMotion("bR", { 1, 3 }, { 1, 1 }); // 2 cells -> 2000 ms
+
+        CHECK(arb.hasActiveMotion('w'));
+        CHECK(arb.hasActiveMotion('b'));
+
+        auto arrivals = arb.advanceTime(2000, board);
+        CHECK(arrivals.size() == 2);
+        CHECK(board.getCell({ 0, 2 }) == "wR");
+        CHECK(board.getCell({ 1, 1 }) == "bR");
+        CHECK_FALSE(arb.hasActiveMotion());
+    }
+
+    SUBCASE("one color in flight leaves the other free to move") {
+        Board board = loadBoard({ "wR . . ." });
+        RealTimeArbiter arb;
+        arb.startMotion("wR", { 0, 0 }, { 0, 3 }); // 3000 ms
+
+        CHECK(arb.hasActiveMotion('w'));
+        CHECK_FALSE(arb.hasActiveMotion('b'));
     }
 }
