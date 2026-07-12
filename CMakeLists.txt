@@ -12,28 +12,40 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/tests)
 
-set(CORE_SOURCES
-    src/Board.cpp
-    src/Game.cpp
-    src/MoveRules.cpp
+# Legacy Board/Game/MoveRules sources have been removed. The engine layer
+# (model/rules/realtime/engine/io/input) backs both the app and the tests.
+set(ENGINE_SOURCES
+    src/model/Board.cpp
+    src/model/Piece.cpp
+    src/model/Position.cpp
+    src/rules/PieceRules.cpp
+    src/rules/RuleEngine.cpp
+    src/realtime/RealTimeArbiter.cpp
+    src/engine/GameEngine.cpp
+    src/io/BoardParser.cpp
+    src/io/BoardPrinter.cpp
+    src/input/BoardMapper.cpp
+    src/input/Controller.cpp
+    src/texttests/ScriptParser.cpp
+    src/texttests/ScriptRunner.cpp
 )
 
-add_executable(${PROJECT_NAME} src/main.cpp ${CORE_SOURCES})
+# App executable: composition root in src/main.cpp wires the layers together.
+add_executable(KungFuChess
+    src/main.cpp
+    ${ENGINE_SOURCES}
+)
 
-add_executable(KungFuChessTests
+add_executable(KungFuChessEngineTests
     tests/test_main.cpp
-    tests/TestHelpers.cpp
-    tests/BoardTest.cpp
-    tests/MoveRulesKingTest.cpp
-    tests/MoveRulesRookTest.cpp
-    tests/MoveRulesBishopTest.cpp
-    tests/MoveRulesQueenTest.cpp
-    tests/MoveRulesKnightTest.cpp
-    tests/MoveRulesPawnTest.cpp
-    tests/MoveRulesGeneralTest.cpp
-    tests/GameTest.cpp
-    ${CORE_SOURCES}
+    tests/RuleEngineTest.cpp
+    tests/RealTimeArbiterTest.cpp
+    tests/GameEngineTest.cpp
+    tests/BoardMapperTest.cpp
+    tests/ControllerTest.cpp
+    tests/BoardIOTest.cpp
+    ${ENGINE_SOURCES}
 )
 
 enable_testing()
-add_test(NAME KungFuChessTests COMMAND KungFuChessTests)
+add_test(NAME KungFuChessEngineTests COMMAND KungFuChessEngineTests)

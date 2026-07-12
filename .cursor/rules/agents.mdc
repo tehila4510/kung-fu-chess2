@@ -33,7 +33,7 @@ alwaysApply: true
 
 - C++17, STL only, no third-party deps
 - Headers in `include/`, sources in `src/`
-- Build: `.\build.bat`, `.\build.bat run`, `.\build.bat test`
+- Build: `.\build.bat` builds and runs the app (`src\main.cpp` composition root); `.\build.bat test` builds and runs the engine test suite
 
 ## Language
 
@@ -52,10 +52,13 @@ include/
 ├── input/       Controller, BoardMapper
 ├── view/        Renderer, ImageView
 ├── texttests/   ScriptParser, ScriptRunner
-├── App.h        Composition root
-├── Board.h      (legacy — migrating to model/)
-└── Game.h       (legacy — migrating to engine/)
+└── App.h        Composition root
 ```
+
+> Legacy `Board.h`/`Board.cpp`, `Game.h`/`Game.cpp`, `MoveRules.h`/`MoveRules.cpp` are removed.
+> `src/main.cpp` is the composition root: it delegates entirely to
+> `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:` protocol via
+> `ScriptParser`/`BoardParser` and replays it against `GameEngine` + `Controller` + `BoardPrinter`.
 
 ## Architecture
 
@@ -86,8 +89,11 @@ main/App → input/view/io → engine → rules/realtime → model
 ## Input format (do not change without explicit request)
 
 1. Board rows until `Board:` marker (tokens: `.`, `wK`, `bQ`)
-2. `Commands:` — `click X Y`, `wait MS`, `print board`
+2. `Commands:` — `click X Y`, `jump X Y`, `wait MS`, `print board`
 3. Errors to stdout: `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`
+4. `jump X Y` lifts the piece at that cell airborne in place for a fixed 1s duration (bypasses normal
+   travel time since it never changes squares); it lands back down and captures whatever occupies the
+   square by then. Rejected if the cell is empty or that color already has a motion in flight.
 
 ## Code style
 

@@ -21,15 +21,25 @@ void Controller::clearSelection() {
 }
 
 // Guards snapshot access; a cell beyond the actual board holds no piece.
-static bool cellHasPiece(const GameSnapshot& snap, const Position& cell) {
+static std::string cellToken(const GameSnapshot& snap, const Position& cell) {
     if (cell.row < 0 || cell.row >= static_cast<int>(snap.cells.size())) {
-        return false;
+        return ".";
     }
     const std::vector<std::string>& row = snap.cells[static_cast<size_t>(cell.row)];
     if (cell.col < 0 || cell.col >= static_cast<int>(row.size())) {
-        return false;
+        return ".";
     }
-    return row[static_cast<size_t>(cell.col)] != ".";
+    return row[static_cast<size_t>(cell.col)];
+}
+
+static bool cellHasPiece(const GameSnapshot& snap, const Position& cell) {
+    return cellToken(snap, cell) != ".";
+}
+
+static bool sameColor(const GameSnapshot& snap, const Position& a, const Position& b) {
+    const std::string tokenA = cellToken(snap, a);
+    const std::string tokenB = cellToken(snap, b);
+    return tokenA != "." && tokenB != "." && tokenA[0] == tokenB[0];
 }
 
 ClickResult Controller::click(int x, int y) {
@@ -41,9 +51,10 @@ ClickResult Controller::click(int x, int y) {
         return { ClickOutcome::Cleared, { false, "" } };
     }
     const Position cell = *mapped;
+    const GameSnapshot snap = engine.snapshot();
 
     if (!hasSelection) {
-        if (!cellHasPiece(engine.snapshot(), cell)) {
+        if (!cellHasPiece(snap, cell)) {
             return { ClickOutcome::Ignored, { false, "" } };
         }
         selection = cell;
@@ -56,8 +67,24 @@ ClickResult Controller::click(int x, int y) {
         return { ClickOutcome::Cleared, { false, "" } };
     }
 
+    // Clicking another piece of the same color re-targets the selection
+    // instead of requesting a move onto a friendly square, which would
+    // always be illegal anyway.
+    if (cellHasPiece(snap, cell) && sameColor(snap, cell, selection)) {
+        selection = cell;
+        return { ClickOutcome::Selected, { false, "" } };
+    }
+
     const Position from = selection;
     clearSelection();
     const MoveResult result = engine.requestMove(from, cell);
     return { ClickOutcome::MoveRequested, result };
+}
+
+MoveResult Controller::jump(int x, int y) {
+    const std::optional<Position> mapped = mapper.pixelToCell(x, y);
+    if (!mapped) {
+        return { false, "outside_board" };
+    }
+    return engine.requestJump(*mapped);
 }

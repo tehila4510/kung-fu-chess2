@@ -1,6 +1,7 @@
 #include "doctest.h"
 #include "engine/GameEngine.h"
 #include "input/Controller.h"
+#include "io/BoardParser.h"
 
 #include <string>
 #include <vector>
@@ -8,13 +9,17 @@
 namespace {
 
 GameEngine loadEngine(const std::vector<std::string>& rows) {
-    std::vector<std::string> lines = { "Board:" };
-    lines.insert(lines.end(), rows.begin(), rows.end());
-    lines.push_back("Commands:");
+    std::string text;
+    for (const std::string& row : rows) {
+        text += row;
+        text += '\n';
+    }
+
+    BoardParseResult parsed = BoardParser().parseText(text);
+    REQUIRE(parsed.board.has_value());
 
     GameEngine engine;
-    size_t index = 0;
-    engine.setup(lines, index);
+    engine.setup(std::move(*parsed.board));
     return engine;
 }
 

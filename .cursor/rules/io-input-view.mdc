@@ -9,8 +9,9 @@ alwaysApply: false
 ## Stdin protocol (do not change without explicit request)
 
 1. Board rows until `Board:` marker (or legacy: rows then `Commands:`)
-2. Commands: `click X Y`, `wait MS`, `print board`
+2. Commands: `click X Y`, `jump X Y`, `wait MS`, `print board`
 3. Errors to stdout: `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`, etc.
+4. `main.cpp` runs the whole protocol via `ScriptRunner::run(std::cin, std::cout)` — no hardcoded demo
 
 ## Layer roles
 
@@ -24,11 +25,16 @@ alwaysApply: false
 ## Input flow
 
 ```
-stdin → ScriptParser/App → Controller → GameEngine → snapshot → Renderer
+stdin → ScriptParser → ScriptRunner → Controller → GameEngine → snapshot → BoardPrinter
 ```
 
 - `BoardMapper`: pixel `(x, y)` → grid `Position` using cell size constant
-- `Controller`: translate `click` into `requestMove(from, to)` based on selection state
+- `Controller`: translate `click` into `requestMove(from, to)` based on selection state (clicking another
+  same-color piece re-targets the selection instead of requesting a move); translate `jump` directly into
+  `requestJump(at)`
+- `ScriptParser`: parses the `Board:`/`Commands:` protocol into a `Board` + `ScriptCommand` list
+- `ScriptRunner`: replays parsed commands against a fresh `GameEngine`/`Controller`, writing `print board`
+  output; this is what `main.cpp` calls with `std::cin`/`std::cout`
 
 ## View flow
 

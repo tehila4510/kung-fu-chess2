@@ -8,8 +8,10 @@ class Board {
     std::vector<std::vector<std::string>> grid;
     int rows = 0, cols = 0;
 public:
-    bool loadFromLines(const std::vector<std::string>& lines, size_t& index);
-    void print() const;
+    Board() = default;
+    // Build directly from a pre-validated, rectangular grid (used by BoardParser).
+    explicit Board(std::vector<std::vector<std::string>> initialGrid);
+
     bool isWithinBounds(const Position& p) const;
     std::string getCell(const Position& p) const;
     void setCell(const Position& p, const std::string& v);

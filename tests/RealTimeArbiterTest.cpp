@@ -1,6 +1,7 @@
 #include "doctest.h"
 #include "realtime/RealTimeArbiter.h"
 #include "model/Board.h"
+#include "io/BoardParser.h"
 
 #include <string>
 #include <vector>
@@ -8,14 +9,15 @@
 namespace {
 
 Board loadBoard(const std::vector<std::string>& rows) {
-    std::vector<std::string> lines = { "Board:" };
-    lines.insert(lines.end(), rows.begin(), rows.end());
-    lines.push_back("Commands:");
+    std::string text;
+    for (const std::string& row : rows) {
+        text += row;
+        text += '\n';
+    }
 
-    Board board;
-    size_t index = 0;
-    board.loadFromLines(lines, index);
-    return board;
+    BoardParseResult parsed = BoardParser().parseText(text);
+    REQUIRE(parsed.board.has_value());
+    return std::move(*parsed.board);
 }
 
 } // namespace

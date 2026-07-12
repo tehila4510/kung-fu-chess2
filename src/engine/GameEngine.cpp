@@ -5,8 +5,9 @@ static bool isKing(const std::string& piece) {
     return piece.size() == 2 && piece[1] == 'K';
 }
 
-bool GameEngine::setup(const std::vector<std::string>& lines, size_t& index) {
-    return board.loadFromLines(lines, index);
+void GameEngine::setup(Board initialBoard) {
+    board = std::move(initialBoard);
+    gameOver = false;
 }
 
 MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
@@ -27,6 +28,26 @@ MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
     }
 
     arbiter.startMotion(board.getCell(from), from, to);
+    return { true, "ok" };
+}
+
+MoveResult GameEngine::requestJump(const Position& at) {
+    if (gameOver) {
+        return { false, "game_over" };
+    }
+    if (!board.isWithinBounds(at)) {
+        return { false, "outside_board" };
+    }
+
+    const std::string piece = board.getCell(at);
+    if (piece == ".") {
+        return { false, "empty_source" };
+    }
+    if (arbiter.hasActiveMotion(piece[0])) {
+        return { false, "move_in_flight" };
+    }
+
+    arbiter.startJump(piece, at);
     return { true, "ok" };
 }
 

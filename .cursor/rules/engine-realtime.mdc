@@ -10,6 +10,7 @@ alwaysApply: false
 
 - Owns `Board`, `RuleEngine`, `RealTimeArbiter`, and `gameOver` flag
 - Public API: `setup`, `requestMove`, `wait`, `snapshot`, `isGameOver`
+- `setup(Board)`: takes an already-parsed board; the engine never parses text. Text → `Board` is `io/BoardParser`'s job (invoked by the composition root)
 - `requestMove`: validate via `RuleEngine`, then delegate motion to arbiter or apply instantly per game rules
 - `snapshot()`: build immutable `GameSnapshot` for view — no live references to internal state
 

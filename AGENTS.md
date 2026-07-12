@@ -17,9 +17,7 @@ include/
 ├── input/       Controller, BoardMapper
 ├── view/        Renderer, ImageView
 ├── texttests/   ScriptParser, ScriptRunner
-├── App.h        Composition root
-├── Board.h      (legacy — migrating to model/)
-└── Game.h       (legacy — migrating to engine/)
+└── App.h        Composition root
 
 src/             mirrors include/ paths + main.cpp
 build.bat        primary Windows build script
@@ -27,12 +25,16 @@ CMakeLists.txt   optional CMake build
 .cursor/rules/   Cursor MDC rules (agents.mdc = entry point)
 ```
 
+> Legacy `Board.h`/`Board.cpp`, `Game.h`/`Game.cpp`, and `MoveRules.h`/`MoveRules.cpp`
+> have been removed. `src/main.cpp` is the composition root; it delegates entirely to
+> `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:` protocol
+> (via `ScriptParser`/`BoardParser`) and replays it against the `model/rules/realtime/engine/input/io` layers.
+
 ## Build & verify
 
 ```powershell
-.\build.bat
-.\build.bat run
-.\build.bat test
+.\build.bat        # build and run the app (src/main.cpp composition root)
+.\build.bat test   # build and run the engine test suite
 ```
 
 Compiler flags: `-std=c++17 -Iinclude -Wall -Wextra -Wpedantic`
@@ -67,9 +69,14 @@ main/App → input/view/io → engine → rules/realtime → model
 ## Input format
 
 1. Board rows until `Board:` marker (tokens like `.`, `wK`, `bQ`)
-2. `Commands:` section — `click X Y`, `wait MS`, `print board`
+2. `Commands:` section — `click X Y`, `jump X Y`, `wait MS`, `print board`
 
 Errors go to stdout (e.g. `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`).
+
+`jump X Y` lifts the piece at that cell airborne in place (no destination — it always returns to the same
+square) for a fixed 1s duration, bypassing normal per-cell travel time. It lands back down and captures
+whatever occupies the square at that point (an enemy that moved in while it was airborne); it is rejected
+if the cell is empty or that color already has a motion in flight.
 
 ## Language
 
