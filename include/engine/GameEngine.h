@@ -23,5 +23,7 @@ public:
     void wait(int ms);
     GameSnapshot snapshot() const;
     bool isGameOver() const;
+    int rowCount() const;
+    int columnCount() const;
 };
 #endif

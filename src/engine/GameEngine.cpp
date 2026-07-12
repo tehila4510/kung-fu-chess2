@@ -43,6 +43,14 @@ bool GameEngine::isGameOver() const {
     return gameOver;
 }
 
+int GameEngine::rowCount() const {
+    return board.getRowCount();
+}
+
+int GameEngine::columnCount() const {
+    return board.getColCount();
+}
+
 GameSnapshot GameEngine::snapshot() const {
     GameSnapshot snap;
     snap.gameOver = gameOver;

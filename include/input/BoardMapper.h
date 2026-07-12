@@ -1,12 +1,17 @@
 #ifndef BOARD_MAPPER_H
 #define BOARD_MAPPER_H
 #include "model/Position.h"
+#include <optional>
 
 class BoardMapper {
-private:
-    int cellSize=100;
+    int cellSize = 100;
+    int widthCells = 8;  // number of columns (x axis)
+    int heightCells = 8; // number of rows (y axis)
 public:
-    BoardMapper(int size) : cellSize(size) {}
-    Position pixelToCell(int x, int y) const ;
+    BoardMapper(int cellSize = 100, int widthCells = 8, int heightCells = 8);
+    std::optional<Position> pixelToCell(int x, int y) const;
+    int getCellSize() const;
+    int getWidthCells() const;
+    int getHeightCells() const;
 };
 #endif
