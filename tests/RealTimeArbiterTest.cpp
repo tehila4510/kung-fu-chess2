@@ -20,7 +20,7 @@ Board loadBoard(const std::vector<std::string>& rows) {
     return std::move(*parsed.board);
 }
 
-} // namespace
+}
 
 TEST_CASE("RealTimeArbiter times and resolves motion") {
     SUBCASE("no motion is inactive") {
@@ -33,12 +33,12 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
     SUBCASE("motion stays in flight until arrival") {
         Board board = loadBoard({ "wR . . ." });
         RealTimeArbiter arb;
-        arb.startMotion("wR", { 0, 0 }, { 0, 3 }); // 3 cells -> 3000 ms
+        arb.startMotion("wR", { 0, 0 }, { 0, 3 });
         CHECK(arb.hasActiveMotion());
 
         CHECK(arb.advanceTime(2999, board).empty());
         CHECK(arb.hasActiveMotion());
-        CHECK(board.getCell({ 0, 0 }) == "wR"); // not moved yet
+        CHECK(board.getCell({ 0, 0 }) == "wR");
     }
 
     SUBCASE("arrival moves the piece and clears the motion") {
@@ -83,8 +83,8 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
             "wR . . .",
             ". . . bR" });
         RealTimeArbiter arb;
-        arb.startMotion("wR", { 0, 0 }, { 0, 2 }); // 2 cells -> 2000 ms
-        arb.startMotion("bR", { 1, 3 }, { 1, 1 }); // 2 cells -> 2000 ms
+        arb.startMotion("wR", { 0, 0 }, { 0, 2 });
+        arb.startMotion("bR", { 1, 3 }, { 1, 1 });
 
         CHECK(arb.hasActiveMotion('w'));
         CHECK(arb.hasActiveMotion('b'));
@@ -99,7 +99,7 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
     SUBCASE("one color in flight leaves the other free to move") {
         Board board = loadBoard({ "wR . . ." });
         RealTimeArbiter arb;
-        arb.startMotion("wR", { 0, 0 }, { 0, 3 }); // 3000 ms
+        arb.startMotion("wR", { 0, 0 }, { 0, 3 });
 
         CHECK(arb.hasActiveMotion('w'));
         CHECK_FALSE(arb.hasActiveMotion('b'));

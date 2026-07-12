@@ -19,7 +19,7 @@ Board loadBoard(const std::vector<std::string>& rows) {
     return std::move(*parsed.board);
 }
 
-} // namespace
+}
 
 TEST_CASE("RuleEngine.validateMove reports reasons") {
     RuleEngine engine;

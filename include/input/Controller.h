@@ -5,10 +5,10 @@
 #include "model/Position.h"
 
 enum class ClickOutcome {
-    Selected,       
-    Cleared,        
-    MoveRequested,  
-    Ignored         
+    Selected,
+    Cleared,
+    MoveRequested,
+    Ignored
 };
 
 struct ClickResult {
@@ -23,12 +23,10 @@ class Controller {
     Position selection;
     bool hasSelection = false;
 public:
-   
+
     explicit Controller(GameEngine& engine, int cellSize = 100);
     Controller(GameEngine& engine, BoardMapper mapper);
     ClickResult click(int x, int y);
-    // Maps a pixel to a cell and requests a jump there; independent of any
-    // pending click selection.
     MoveResult jump(int x, int y);
     bool hasActiveSelection() const;
     Position selectedCell() const;

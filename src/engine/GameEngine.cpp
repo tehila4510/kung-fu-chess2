@@ -1,6 +1,5 @@
 #include "engine/GameEngine.h"
 
-// A captured king ends the game. Piece tokens are "<color><kind>", e.g. "wK".
 static bool isKing(const std::string& piece) {
     return piece.size() == 2 && piece[1] == 'K';
 }
@@ -18,7 +17,6 @@ MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
     const std::string mover = board.getCell(from);
     if (mover.size() == 2) {
         const char color = mover[0];
-        // A player is disabled while their own piece is in flight.
         if (arbiter.hasActiveMotion(color)) {
             return { false, "move_in_flight" };
         }

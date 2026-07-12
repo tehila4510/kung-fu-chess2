@@ -9,7 +9,6 @@ class Board {
     int rows = 0, cols = 0;
 public:
     Board() = default;
-    // Build directly from a pre-validated, rectangular grid (used by BoardParser).
     explicit Board(std::vector<std::vector<std::string>> initialGrid);
 
     bool isWithinBounds(const Position& p) const;

@@ -22,7 +22,7 @@ GameEngine loadEngine(const std::vector<std::string>& rows) {
     return engine;
 }
 
-} // namespace
+}
 
 TEST_CASE("GameEngine orchestrates moves, timing and game over") {
     SUBCASE("snapshot reflects the loaded board") {
@@ -45,7 +45,7 @@ TEST_CASE("GameEngine orchestrates moves, timing and game over") {
             ". . . .",
             "bR . . ." });
 
-        CHECK(engine.requestMove({ 0, 0 }, { 0, 3 }).is_accepted); // white in flight
+        CHECK(engine.requestMove({ 0, 0 }, { 0, 3 }).is_accepted);
         const MoveResult second = engine.requestMove({ 0, 0 }, { 0, 1 });
         CHECK_FALSE(second.is_accepted);
         CHECK(second.reason == "move_in_flight");
@@ -57,9 +57,9 @@ TEST_CASE("GameEngine orchestrates moves, timing and game over") {
             ". . . .",
             "bR . . ." });
 
-        CHECK(engine.requestMove({ 0, 0 }, { 0, 3 }).is_accepted); // white in flight
+        CHECK(engine.requestMove({ 0, 0 }, { 0, 3 }).is_accepted);
         const MoveResult second = engine.requestMove({ 2, 0 }, { 2, 3 });
-        CHECK_FALSE(second.is_accepted); // opposite colors share a common route
+        CHECK_FALSE(second.is_accepted);
         CHECK(second.reason == "common_route");
     }
 
@@ -67,7 +67,7 @@ TEST_CASE("GameEngine orchestrates moves, timing and game over") {
         GameEngine engine = loadEngine({ "wR . . bK" });
         CHECK(engine.requestMove({ 0, 0 }, { 0, 3 }).is_accepted);
 
-        engine.wait(3000); // rook travels 3 cells -> 3000 ms
+        engine.wait(3000);
         CHECK(engine.isGameOver());
         CHECK(engine.snapshot().gameOver);
 

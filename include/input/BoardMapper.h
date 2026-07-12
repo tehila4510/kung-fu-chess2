@@ -5,8 +5,8 @@
 
 class BoardMapper {
     int cellSize = 100;
-    int widthCells = 8;  // number of columns (x axis)
-    int heightCells = 8; // number of rows (y axis)
+    int widthCells = 8;
+    int heightCells = 8;
 public:
     BoardMapper(int cellSize = 100, int widthCells = 8, int heightCells = 8);
     std::optional<Position> pixelToCell(int x, int y) const;

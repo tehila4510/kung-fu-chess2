@@ -4,7 +4,7 @@
 #include <optional>
 
 TEST_CASE("BoardMapper maps pixels to cells and rejects off-board clicks") {
-    BoardMapper mapper(100, 8, 8); // 100px cells on an 8x8 board
+    BoardMapper mapper(100, 8, 8);
 
     SUBCASE("dimensions are reported back to the caller") {
         CHECK(mapper.getCellSize() == 100);
@@ -32,8 +32,8 @@ TEST_CASE("BoardMapper maps pixels to cells and rejects off-board clicks") {
     }
 
     SUBCASE("coordinates beyond the last cell fall outside the board") {
-        CHECK_FALSE(mapper.pixelToCell(800, 50).has_value()); // col 8 -> out
-        CHECK_FALSE(mapper.pixelToCell(50, 800).has_value()); // row 8 -> out
+        CHECK_FALSE(mapper.pixelToCell(800, 50).has_value());
+        CHECK_FALSE(mapper.pixelToCell(50, 800).has_value());
     }
 
     SUBCASE("the last valid pixel maps to the last cell") {
@@ -45,7 +45,6 @@ TEST_CASE("BoardMapper maps pixels to cells and rejects off-board clicks") {
 }
 
 TEST_CASE("BoardMapper supports rectangular boards with independent bounds") {
-    // 4 columns wide, 3 rows tall, 100px cells: valid x in [0,400), y in [0,300).
     BoardMapper mapper(100, 4, 3);
 
     SUBCASE("dimensions reflect a rectangular board") {
@@ -61,17 +60,15 @@ TEST_CASE("BoardMapper supports rectangular boards with independent bounds") {
     }
 
     SUBCASE("a column just past the width is rejected") {
-        CHECK_FALSE(mapper.pixelToCell(400, 50).has_value()); // col 4 -> out
+        CHECK_FALSE(mapper.pixelToCell(400, 50).has_value());
     }
 
     SUBCASE("a row just past the height is rejected") {
-        CHECK_FALSE(mapper.pixelToCell(50, 300).has_value()); // row 3 -> out
+        CHECK_FALSE(mapper.pixelToCell(50, 300).has_value());
     }
 
     SUBCASE("width and height are validated independently") {
-        // A row that would be valid on a square board but not this short one.
-        CHECK_FALSE(mapper.pixelToCell(50, 350).has_value()); // row 3 -> out
-        // A column still inside the wider axis remains valid.
+        CHECK_FALSE(mapper.pixelToCell(50, 350).has_value());
         const std::optional<Position> cell = mapper.pixelToCell(350, 50);
         REQUIRE(cell.has_value());
         CHECK(cell->row == 0);
@@ -80,7 +77,7 @@ TEST_CASE("BoardMapper supports rectangular boards with independent bounds") {
 }
 
 TEST_CASE("BoardMapper honours a non-default cell size") {
-    BoardMapper mapper(50, 6, 5); // 50px cells, 6 wide, 5 tall
+    BoardMapper mapper(50, 6, 5);
 
     SUBCASE("cells scale with the configured size") {
         const std::optional<Position> cell = mapper.pixelToCell(120, 60);
@@ -90,8 +87,8 @@ TEST_CASE("BoardMapper honours a non-default cell size") {
     }
 
     SUBCASE("the far edge respects the smaller cell size") {
-        CHECK_FALSE(mapper.pixelToCell(300, 50).has_value()); // col 6 -> out
-        CHECK_FALSE(mapper.pixelToCell(50, 250).has_value()); // row 5 -> out
+        CHECK_FALSE(mapper.pixelToCell(300, 50).has_value());
+        CHECK_FALSE(mapper.pixelToCell(50, 250).has_value());
         const std::optional<Position> cell = mapper.pixelToCell(299, 249);
         REQUIRE(cell.has_value());
         CHECK(cell->row == 4);

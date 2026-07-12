@@ -16,12 +16,11 @@ enum class ScriptCommandKind {
     Unknown
 };
 
-// A single parsed line from the "Commands:" section.
 struct ScriptCommand {
     ScriptCommandKind kind = ScriptCommandKind::Unknown;
-    int x = 0;   // click/jump: pixel x
-    int y = 0;   // click/jump: pixel y
-    int ms = 0;  // wait: duration in milliseconds
+    int x = 0;
+    int y = 0;
+    int ms = 0;
 };
 
 struct ScriptParseResult {
@@ -30,10 +29,6 @@ struct ScriptParseResult {
     std::vector<ScriptCommand> commands;
 };
 
-// Parses the full stdin protocol: a board section (delegated to BoardParser)
-// followed by a "Commands:" section of click/jump/wait/print-board lines.
-// I/O-layer component: text in, structured data out; it never touches the
-// engine, rules, or global streams itself.
 class ScriptParser {
 public:
     ScriptParseResult parse(std::istream& input) const;

@@ -20,7 +20,6 @@ bool isValidToken(const std::string& tok) {
     return pieces.find(tok[1]) != std::string::npos;
 }
 
-// Split a trimmed line into whitespace-separated cell tokens.
 std::vector<std::string> tokenize(const std::string& line) {
     std::istringstream iss(line);
     std::vector<std::string> tokens;
@@ -29,7 +28,6 @@ std::vector<std::string> tokenize(const std::string& line) {
     return tokens;
 }
 
-// Validate token grammar and rectangularity, then hand ownership to a Board.
 BoardParseResult finalize(std::vector<std::vector<std::string>> grid) {
     if (grid.empty()) {
         return { std::nullopt, BoardParseStatus::EmptyBoard };
@@ -43,7 +41,7 @@ BoardParseResult finalize(std::vector<std::vector<std::string>> grid) {
     return { Board(std::move(grid)), BoardParseStatus::Ok };
 }
 
-} // namespace
+}
 
 const char* toReasonCode(BoardParseStatus status) {
     switch (status) {
@@ -81,7 +79,7 @@ BoardParseResult BoardParser::parseText(const std::string& text) const {
 
 BoardParseResult BoardParser::parseLines(const std::vector<std::string>& lines, size_t& index) const {
     while (index < lines.size() && trim(lines[index]) != "Board:") ++index;
-    if (index < lines.size()) ++index; // consume the "Board:" marker
+    if (index < lines.size()) ++index;
 
     std::vector<std::vector<std::string>> grid;
     while (index < lines.size()) {

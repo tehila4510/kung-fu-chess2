@@ -8,7 +8,6 @@
 
 namespace {
 
-// Join board rows into a single newline-terminated layout string.
 std::string layout(const std::vector<std::string>& rows) {
     std::string text;
     for (const std::string& row : rows) {
@@ -24,7 +23,7 @@ std::string render(const Board& board) {
     return out.str();
 }
 
-} // namespace
+}
 
 TEST_CASE("BoardParser derives dimensions dynamically, without hardcoded 8x8") {
     BoardParser parser;
@@ -114,7 +113,7 @@ TEST_CASE("BoardParser honours Board:/Commands: markers and advances the cursor"
     REQUIRE(result.board.has_value());
     CHECK(result.board->getRowCount() == 2);
     CHECK(result.board->getColCount() == 4);
-    CHECK(lines[index] == "click 0 0"); // cursor left just past "Commands:"
+    CHECK(lines[index] == "click 0 0");
 }
 
 TEST_CASE("BoardPrinter renders dynamic geometries and round-trips through the parser") {

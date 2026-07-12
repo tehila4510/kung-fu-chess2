@@ -20,7 +20,6 @@ void Controller::clearSelection() {
     selection = Position{};
 }
 
-// Guards snapshot access; a cell beyond the actual board holds no piece.
 static std::string cellToken(const GameSnapshot& snap, const Position& cell) {
     if (cell.row < 0 || cell.row >= static_cast<int>(snap.cells.size())) {
         return ".";
@@ -45,7 +44,6 @@ static bool sameColor(const GameSnapshot& snap, const Position& a, const Positio
 ClickResult Controller::click(int x, int y) {
     const std::optional<Position> mapped = mapper.pixelToCell(x, y);
 
-    // Off-board click means "never mind": cancel any pending selection.
     if (!mapped) {
         clearSelection();
         return { ClickOutcome::Cleared, { false, "" } };
@@ -67,9 +65,6 @@ ClickResult Controller::click(int x, int y) {
         return { ClickOutcome::Cleared, { false, "" } };
     }
 
-    // Clicking another piece of the same color re-targets the selection
-    // instead of requesting a move onto a friendly square, which would
-    // always be illegal anyway.
     if (cellHasPiece(snap, cell) && sameColor(snap, cell, selection)) {
         selection = cell;
         return { ClickOutcome::Selected, { false, "" } };

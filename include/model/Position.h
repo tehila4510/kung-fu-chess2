@@ -19,10 +19,8 @@ struct Position {
     int rowDistanceTo(const Position& o) const;
     int colDistanceTo(const Position& o) const;
 
-    // Number of king steps between cells (Chebyshev distance).
     int chebyshevDistanceTo(const Position& o) const;
 
-    // Number of orthogonal steps between cells (Manhattan distance).
     int manhattanDistanceTo(const Position& o) const;
 
     bool isSameRow(const Position& o) const { return row == o.row; }

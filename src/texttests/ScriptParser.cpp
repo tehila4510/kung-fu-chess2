@@ -13,7 +13,6 @@ std::string trim(const std::string& s) {
     return s.substr(a, b - a + 1);
 }
 
-// Parses one non-empty, trimmed command line into a ScriptCommand.
 ScriptCommand parseCommandLine(const std::string& line) {
     std::istringstream iss(line);
     std::string verb;
@@ -39,13 +38,11 @@ ScriptCommand parseCommandLine(const std::string& line) {
     return cmd;
 }
 
-} // namespace
+}
 
 ScriptParseResult ScriptParser::parse(std::istream& input) const {
     ScriptParseResult result;
 
-    // BoardParser::parse reads rows until EOF or a "Commands:" line, leaving
-    // the stream positioned right after that marker for the commands below.
     const BoardParseResult boardResult = BoardParser().parse(input);
     result.board = boardResult.board;
     result.boardStatus = boardResult.status;

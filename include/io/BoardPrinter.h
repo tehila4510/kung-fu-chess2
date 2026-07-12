@@ -7,10 +7,8 @@
 
 class BoardPrinter {
 public:
-    // Render to an explicit stream.
     void print(const Board& board, std::ostream& out) const;
 
-    // Render to std::cout.
     void print(const Board& board) const;
 };
 
