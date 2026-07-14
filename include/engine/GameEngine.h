@@ -1,21 +1,16 @@
 #ifndef GAME_ENGINE_H
 #define GAME_ENGINE_H
 #include "model/Board.h"
+#include "model/GameState.h"
 #include "rules/RuleEngine.h"
 #include "realtime/RealTimeArbiter.h"
 
 struct MoveResult { bool is_accepted; std::string reason; };
 
-struct GameSnapshot {
-    std::vector<std::vector<std::string>> cells;
-    bool gameOver = false;
-};
-
 class GameEngine {
-    Board board;
+    GameState gameState;
     RuleEngine ruleEngine;
     RealTimeArbiter arbiter;
-    bool gameOver = false;
 public:
     void setup(Board board);
     MoveResult requestMove(const Position& from, const Position& to);

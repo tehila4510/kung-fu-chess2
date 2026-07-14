@@ -16,6 +16,7 @@ include_directories(${PROJECT_SOURCE_DIR}/include ${PROJECT_SOURCE_DIR}/tests)
 # (model/rules/realtime/engine/io/input) backs both the app and the tests.
 set(ENGINE_SOURCES
     src/model/Board.cpp
+    src/model/GameState.cpp
     src/model/Piece.cpp
     src/model/Position.cpp
     src/rules/PieceRules.cpp

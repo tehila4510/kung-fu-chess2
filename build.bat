@@ -17,7 +17,7 @@ set COMMON_FLAGS=-std=c++17 -Iinclude -Itests -Wall -Wextra -Wpedantic
 
 rem Legacy Board/Game/MoveRules sources have been removed. The engine layer
 rem (model/rules/realtime/engine/io/input) backs both the app and the tests.
-set ENGINE_SOURCES=src\model\Board.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp src\io\BoardPrinter.cpp src\input\BoardMapper.cpp src\input\Controller.cpp src\texttests\ScriptParser.cpp src\texttests\ScriptRunner.cpp
+set ENGINE_SOURCES=src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp src\io\BoardPrinter.cpp src\input\BoardMapper.cpp src\input\Controller.cpp src\texttests\ScriptParser.cpp src\texttests\ScriptRunner.cpp
 set ENGINE_TEST_SOURCES=tests\test_main.cpp tests\RuleEngineTest.cpp tests\RealTimeArbiterTest.cpp tests\GameEngineTest.cpp tests\BoardMapperTest.cpp tests\ControllerTest.cpp tests\BoardIOTest.cpp %ENGINE_SOURCES%
 
 if /i "%~1"=="test" (

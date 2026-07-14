@@ -5,15 +5,15 @@ static bool isKing(const std::string& piece) {
 }
 
 void GameEngine::setup(Board initialBoard) {
-    board = std::move(initialBoard);
-    gameOver = false;
+    gameState.initialize(std::move(initialBoard));
 }
 
 MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
-    if (gameOver) {
+    if (gameState.isGameOver()) {
         return { false, "game_over" };
     }
 
+    Board& board = gameState.getBoard();
     const std::string mover = board.getCell(from);
     if (mover.size() == 2) {
         const char color = mover[0];
@@ -36,9 +36,11 @@ MoveResult GameEngine::requestMove(const Position& from, const Position& to) {
 }
 
 MoveResult GameEngine::requestJump(const Position& at) {
-    if (gameOver) {
+    if (gameState.isGameOver()) {
         return { false, "game_over" };
     }
+
+    Board& board = gameState.getBoard();
     if (!board.isWithinBounds(at)) {
         return { false, "outside_board" };
     }
@@ -56,40 +58,26 @@ MoveResult GameEngine::requestJump(const Position& at) {
 }
 
 void GameEngine::wait(int ms) {
-    const std::vector<ArrivalEvent> arrivals = arbiter.advanceTime(ms, board);
+    const std::vector<ArrivalEvent> arrivals = arbiter.advanceTime(ms, gameState.getBoard());
     for (const ArrivalEvent& arrival : arrivals) {
         if (isKing(arrival.capturedPiece)) {
-            gameOver = true;
+            gameState.setGameOver(true);
         }
     }
 }
 
 bool GameEngine::isGameOver() const {
-    return gameOver;
+    return gameState.isGameOver();
 }
 
 int GameEngine::rowCount() const {
-    return board.getRowCount();
+    return gameState.rowCount();
 }
 
 int GameEngine::columnCount() const {
-    return board.getColCount();
+    return gameState.columnCount();
 }
 
 GameSnapshot GameEngine::snapshot() const {
-    GameSnapshot snap;
-    snap.gameOver = gameOver;
-
-    const int rows = board.getRowCount();
-    const int cols = board.getColCount();
-    snap.cells.reserve(static_cast<size_t>(rows));
-    for (int r = 0; r < rows; ++r) {
-        std::vector<std::string> row;
-        row.reserve(static_cast<size_t>(cols));
-        for (int c = 0; c < cols; ++c) {
-            row.push_back(board.getCell(Position{ r, c }));
-        }
-        snap.cells.push_back(std::move(row));
-    }
-    return snap;
+    return gameState.createSnapshot();
 }
