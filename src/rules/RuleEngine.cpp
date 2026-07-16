@@ -25,6 +25,11 @@ RuleEngine::RuleEngine() {
 }
 
 MoveValidation RuleEngine::validateMove(const Board& board, const Position& from, const Position& to) const {
+    return validateMove(board, from, to, {});
+}
+
+MoveValidation RuleEngine::validateMove(const Board& board, const Position& from, const Position& to,
+                                        const std::vector<AirborneOccupant>& airborne) const {
     if (!board.isWithinBounds(from) || !board.isWithinBounds(to)) {
         return { false, MoveResult::OutsideBoard };
     }
@@ -39,13 +44,20 @@ MoveValidation RuleEngine::validateMove(const Board& board, const Position& from
         return { false, MoveResult::FriendlyDestination };
     }
 
+    for (const AirborneOccupant& occupant : airborne) {
+        if (occupant.at == to && occupant.piece.size() == 2
+            && occupant.piece[0] == fromCell.getColor()) {
+            return { false, MoveResult::FriendlyDestination };
+        }
+    }
+
     const std::optional<Piece> piece = Piece::tryFromToken(fromCell.getContent(), from);
     if (!piece) {
         return { false, MoveResult::InvalidPiece };
     }
 
     const auto it = rules.find(piece->kind);
-    if (it == rules.end() || !it->second->isValidMove(from, to, board)) {
+    if (it == rules.end() || !it->second->isValidMove(from, to, board, airborne)) {
         return { false, MoveResult::IllegalPieceMove };
     }
 

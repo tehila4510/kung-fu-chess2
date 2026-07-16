@@ -1,6 +1,7 @@
 #include "doctest.h"
 #include "engine/GameEngine.h"
 #include "io/BoardParser.h"
+#include "realtime/RealTimeArbiter.h"
 
 #include <string>
 #include <vector>
@@ -73,5 +74,39 @@ TEST_CASE("GameEngine orchestrates moves, timing and game over") {
         const MoveOutcome afterOver = engine.requestMove({ 0, 3 }, { 1, 3 });
         CHECK_FALSE(afterOver.is_accepted);
         CHECK(afterOver.reason == "game_over");
+    }
+
+    SUBCASE("opponent may move into a square while a jump is airborne") {
+        GameEngine engine = loadEngine({
+            "bP wR .",
+            ". . ." });
+        CHECK(engine.requestJump({ 0, 0 }).is_accepted);
+        CHECK(engine.snapshot().cells[0][0] == ".");
+
+        const MoveOutcome move = engine.requestMove({ 0, 1 }, { 0, 0 });
+        CHECK(move.is_accepted);
+    }
+
+    SUBCASE("pawn may move diagonally onto an airborne enemy jump square") {
+        GameEngine engine = loadEngine({
+            "bP . .",
+            ". wP ." });
+        CHECK(engine.requestJump({ 0, 0 }).is_accepted);
+        CHECK(engine.snapshot().cells[0][0] == ".");
+
+        const MoveOutcome move = engine.requestMove({ 1, 1 }, { 0, 0 });
+        CHECK(move.is_accepted);
+    }
+
+    SUBCASE("jumper captures a piece that entered the square while airborne") {
+        GameEngine engine = loadEngine({
+            "bP wR .",
+            ". . ." });
+        CHECK(engine.requestJump({ 0, 0 }).is_accepted);
+        CHECK(engine.requestMove({ 0, 1 }, { 0, 0 }).is_accepted);
+
+        engine.wait(RealTimeArbiter::kJumpDurationMs);
+        CHECK(engine.snapshot().cells[0][0] == "bP");
+        CHECK(engine.snapshot().cells[0][1] == ".");
     }
 }

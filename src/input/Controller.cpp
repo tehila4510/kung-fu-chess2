@@ -38,9 +38,17 @@ static bool sameColor(const GameSnapshot& snap, const Position& a, const Positio
     return tokenA != "." && tokenB != "." && tokenA[0] == tokenB[0];
 }
 
+static bool selectionHasPiece(const GameSnapshot& snap, const Position& cell) {
+    return cellHasPiece(snap, cell);
+}
+
 ClickResult Controller::click(const Position& cell) {
     try {
         const GameSnapshot snap = engine.snapshot();
+
+        if (hasSelection && !selectionHasPiece(snap, selection)) {
+            clearSelection();
+        }
 
         if (!hasSelection) {
             if (!cellHasPiece(snap, cell)) {
@@ -73,7 +81,11 @@ ClickResult Controller::click(const Position& cell) {
 
 MoveOutcome Controller::jump(const Position& cell) {
     try {
-        return engine.requestJump(cell);
+        const MoveOutcome result = engine.requestJump(cell);
+        if (result.is_accepted) {
+            clearSelection();
+        }
+        return result;
     } catch (const std::exception&) {
         return { false, "runtime_error" };
     }

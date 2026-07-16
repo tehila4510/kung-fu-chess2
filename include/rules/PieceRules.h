@@ -4,13 +4,20 @@
 #include "model/Piece.h"
 #include "model/Position.h"
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
+
+struct AirborneOccupant {
+    Position at;
+    std::string piece;
+};
 
 class IPieceRules {
 public:
     virtual ~IPieceRules() = default;
-    virtual bool isValidMove(const Position& from, const Position& to, const Board& board) const = 0;
+    virtual bool isValidMove(const Position& from, const Position& to, const Board& board,
+                             const std::vector<AirborneOccupant>& airborne) const = 0;
 };
 
 namespace piece_rules {
@@ -34,32 +41,38 @@ const std::vector<Step>& bishopDirs();
 
 class RookRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 class BishopRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 class QueenRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 class KnightRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 class KingRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 class PawnRules : public IPieceRules {
 public:
-    bool isValidMove(const Position& from, const Position& to, const Board& board) const override;
+    bool isValidMove(const Position& from, const Position& to, const Board& board,
+                     const std::vector<AirborneOccupant>& airborne) const override;
 };
 
 #endif

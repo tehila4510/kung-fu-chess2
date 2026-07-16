@@ -1,0 +1,16 @@
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . bP . . . .
+. . wP . . . . .
+. . . . . . . .
+. . . . . . . .
+. . . . . . . .
+Board:
+Commands:
+jump 3 3
+click 4 2
+click 3 3
+print board
+wait 1000
+print board

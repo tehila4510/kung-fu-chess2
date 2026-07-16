@@ -69,4 +69,15 @@ TEST_CASE("RuleEngine.validateMove reports reasons") {
         CHECK(v.is_valid);
         CHECK(hasReason(v, MoveResult::Ok));
     }
+
+    SUBCASE("pawn may capture diagonally onto an airborne enemy jump square") {
+        Board board = loadBoard({
+            "bP . .",
+            ". wP ." });
+        const std::vector<AirborneOccupant> airborne{
+            AirborneOccupant{ { 0, 0 }, "bP" },
+        };
+        MoveValidation v = engine.validateMove(board, { 1, 1 }, { 0, 0 }, airborne);
+        CHECK(v.is_valid);
+    }
 }

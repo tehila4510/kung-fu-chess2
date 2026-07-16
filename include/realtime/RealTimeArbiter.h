@@ -14,11 +14,11 @@ struct ArrivalEvent {
 
 class RealTimeArbiter {
     static constexpr int kColorCount = 2;
-    static constexpr int kJumpDurationMs = 1000;
     long long clockMs = 0;
     long long nextStartSeq = 0;
     std::optional<Motion> active[kColorCount];
 public:
+    static constexpr int kJumpDurationMs = 5000;
     bool hasActiveMotion() const;
     bool hasActiveMotion(char color) const;
     bool hasActiveTravel(char color) const;

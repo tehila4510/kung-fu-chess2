@@ -67,9 +67,20 @@ std::optional<Piece> pieceAt(const Board& board, const Position& from) {
     return Piece::tryFromToken(board.getCell(from).getContent(), from);
 }
 
+const AirborneOccupant* airborneAt(const std::vector<AirborneOccupant>& airborne,
+                                   const Position& at) {
+    for (const AirborneOccupant& occupant : airborne) {
+        if (occupant.at == at) {
+            return &occupant;
+        }
+    }
+    return nullptr;
+}
+
 } // namespace piece_rules
 
-bool RookRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool RookRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                            const std::vector<AirborneOccupant>& /*airborne*/) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -79,7 +90,8 @@ bool RookRules::isValidMove(const Position& from, const Position& to, const Boar
     return legal.find(to) != legal.end();
 }
 
-bool BishopRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool BishopRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                              const std::vector<AirborneOccupant>& /*airborne*/) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -89,7 +101,8 @@ bool BishopRules::isValidMove(const Position& from, const Position& to, const Bo
     return legal.find(to) != legal.end();
 }
 
-bool QueenRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool QueenRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                             const std::vector<AirborneOccupant>& /*airborne*/) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -100,7 +113,8 @@ bool QueenRules::isValidMove(const Position& from, const Position& to, const Boa
     return legal.find(to) != legal.end();
 }
 
-bool KnightRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool KnightRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                              const std::vector<AirborneOccupant>& /*airborne*/) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -114,7 +128,8 @@ bool KnightRules::isValidMove(const Position& from, const Position& to, const Bo
     return legal.find(to) != legal.end();
 }
 
-bool KingRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool KingRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                            const std::vector<AirborneOccupant>& /*airborne*/) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -128,7 +143,8 @@ bool KingRules::isValidMove(const Position& from, const Position& to, const Boar
     return legal.find(to) != legal.end();
 }
 
-bool PawnRules::isValidMove(const Position& from, const Position& to, const Board& board) const {
+bool PawnRules::isValidMove(const Position& from, const Position& to, const Board& board,
+                            const std::vector<AirborneOccupant>& airborne) const {
     const std::optional<Piece> piece = piece_rules::pieceAt(board, from);
     if (!piece) {
         return false;
@@ -157,9 +173,13 @@ bool PawnRules::isValidMove(const Position& from, const Position& to, const Boar
     for (int dc : { -1, 1 }) {
         Position capture{ row + forward, col + dc };
         const Cell& captureCell = board.getCell(capture);
-        if (piece_rules::inBounds(board, capture.row, capture.col)
-            && !captureCell.isEmpty()
-            && captureCell.getColor() != piece->color) {
+        const AirborneOccupant* air = piece_rules::airborneAt(airborne, capture);
+        if (!piece_rules::inBounds(board, capture.row, capture.col)) {
+            continue;
+        }
+        if (!captureCell.isEmpty() && captureCell.getColor() != piece->color) {
+            legal.insert(capture);
+        } else if (air != nullptr && air->piece.size() == 2 && air->piece[0] != piece->color) {
             legal.insert(capture);
         }
     }

@@ -65,4 +65,22 @@ TEST_CASE("Controller drives selection from cell positions") {
         CHECK(r.outcome == ClickOutcome::Selected);
         CHECK(controller.selectedCell() == Position{ 2, 0 });
     }
+
+    SUBCASE("jump clears a stale selection on the jumping square") {
+        controller.click(Position{ 0, 0 });
+        const MoveOutcome jump = controller.jump(Position{ 0, 0 });
+        REQUIRE(jump.is_accepted);
+        CHECK_FALSE(controller.hasActiveSelection());
+
+        const ClickResult move = controller.click(Position{ 0, 3 });
+        CHECK(move.outcome != ClickOutcome::MoveRequested);
+    }
+
+    SUBCASE("move to a square with an airborne enemy jump is accepted") {
+        CHECK(engine.requestJump({ 2, 0 }).is_accepted);
+        controller.click(Position{ 0, 0 });
+        const ClickResult r = controller.click(Position{ 2, 0 });
+        CHECK(r.outcome == ClickOutcome::MoveRequested);
+        CHECK(r.moveResult.is_accepted);
+    }
 }

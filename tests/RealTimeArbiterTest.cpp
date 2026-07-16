@@ -104,4 +104,36 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         CHECK(arb.hasActiveMotion('w'));
         CHECK_FALSE(arb.hasActiveMotion('b'));
     }
+
+    SUBCASE("traveler enters jump square while jumper is airborne then gets captured on landing") {
+        Board board = loadBoard({
+            "bP wR .",
+            ". . ." });
+        RealTimeArbiter arb;
+        arb.startJump("bP", { 0, 0 });
+        board.setCell({ 0, 0 }, ".");
+        arb.startMotion("wR", { 0, 1 }, { 0, 0 });
+
+        auto arrivals = arb.advanceTime(RealTimeArbiter::kJumpDurationMs, board);
+        REQUIRE(arrivals.size() == 2);
+        CHECK(board.getCell({ 0, 0 }).getContent() == "bP");
+        CHECK(arrivals[0].capturedPiece == ".");
+        CHECK(arrivals[1].capturedPiece == "wR");
+    }
+
+    SUBCASE("traveler captures jumper when move started before the jump at same tick") {
+        Board board = loadBoard({
+            "bP . . wR",
+            ". . . ." });
+        RealTimeArbiter arb;
+        arb.startMotion("wR", { 0, 3 }, { 0, 0 });
+        arb.startJump("bP", { 0, 0 });
+        board.setCell({ 0, 0 }, ".");
+
+        auto arrivals = arb.advanceTime(RealTimeArbiter::kJumpDurationMs, board);
+        REQUIRE(arrivals.size() == 2);
+        CHECK(board.getCell({ 0, 0 }).getContent() == "wR");
+        CHECK(arrivals[0].capturedPiece == ".");
+        CHECK(arrivals[1].capturedPiece == "bP");
+    }
 }

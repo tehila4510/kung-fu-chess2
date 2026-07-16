@@ -28,6 +28,8 @@ public:
     RuleEngine();
 
     MoveValidation validateMove(const Board& board, const Position& from, const Position& to) const;
+    MoveValidation validateMove(const Board& board, const Position& from, const Position& to,
+                                const std::vector<AirborneOccupant>& airborne) const;
 
 private:
     std::unordered_map<char, std::unique_ptr<IPieceRules>> rules;

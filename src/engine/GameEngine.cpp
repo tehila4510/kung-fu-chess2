@@ -1,9 +1,20 @@
 #include "engine/GameEngine.h"
 
 #include <stdexcept>
+#include <vector>
 
 static bool isKing(const std::string& piece) {
     return piece.size() == 2 && piece[1] == 'K';
+}
+
+static std::vector<AirborneOccupant> airborneForValidation(const RealTimeArbiter& arbiter) {
+    std::vector<AirborneOccupant> occupants;
+    for (const MotionView& motion : arbiter.activeMotions()) {
+        if (motion.from == motion.to) {
+            occupants.push_back(AirborneOccupant{ motion.from, motion.piece });
+        }
+    }
+    return occupants;
 }
 
 void GameEngine::setup(Board initialBoard) {
@@ -18,7 +29,8 @@ MoveOutcome GameEngine::requestMove(const Position& from, const Position& to) {
 
         Board& board = gameState.getBoard();
 
-        const MoveValidation validation = ruleEngine.validateMove(board, from, to);
+        const MoveValidation validation =
+            ruleEngine.validateMove(board, from, to, airborneForValidation(arbiter));
         if (!validation.is_valid) {
             return { false, toString(validation.reason) };
         }
@@ -60,6 +72,7 @@ MoveOutcome GameEngine::requestJump(const Position& at) {
         }
 
         arbiter.startJump(piece, at);
+        board.setCell(at, ".");
         return { true, "ok" };
     } catch (const std::exception&) {
         return { false, "runtime_error" };

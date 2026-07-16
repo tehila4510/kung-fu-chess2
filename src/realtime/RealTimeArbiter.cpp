@@ -1,7 +1,6 @@
 #include "realtime/RealTimeArbiter.h"
 
 #include <algorithm>
-#include <array>
 #include <cmath>
 #include <stdexcept>
 
@@ -79,58 +78,63 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
     std::vector<ArrivalEvent> arrivals;
     const int lastRow = board.getRowCount() - 1;
 
-    auto isJumpLandingHere = [&](const Position& p) {
-        for (const auto& slot : active) {
-            if (slot && slot->from == slot->to && slot->to == p && clockMs >= slot->arrivalTime) {
-                return true;
-            }
-        }
-        return false;
+    struct PendingArrival {
+        int slotIndex;
+        long long arrivalTime;
+        long long startSeq;
+        bool isJump;
     };
 
-    std::array<int, kColorCount> travelOrder{};
-    int travelCount = 0;
+    std::vector<PendingArrival> pending;
+    pending.reserve(kColorCount);
+
     for (int i = 0; i < kColorCount; ++i) {
         const auto& slot = active[i];
-        if (slot && slot->from != slot->to && clockMs >= slot->arrivalTime) {
-            travelOrder[static_cast<size_t>(travelCount++)] = i;
+        if (slot && clockMs >= slot->arrivalTime) {
+            pending.push_back(PendingArrival{
+                i,
+                slot->arrivalTime,
+                slot->startSeq,
+                slot->from == slot->to,
+            });
         }
     }
-    std::sort(travelOrder.begin(), travelOrder.begin() + travelCount, [&](int a, int b) {
-        return active[a]->startSeq > active[b]->startSeq;
+
+    std::sort(pending.begin(), pending.end(), [](const PendingArrival& a, const PendingArrival& b) {
+        if (a.arrivalTime != b.arrivalTime) {
+            return a.arrivalTime < b.arrivalTime;
+        }
+        return a.startSeq > b.startSeq;
     });
 
-    for (int i = 0; i < travelCount; ++i) {
-        auto& slot = active[static_cast<size_t>(travelOrder[static_cast<size_t>(i)])];
-        const Motion motion = *slot;
-        slot.reset();
-
-        std::string capturedPiece = board.getCell(motion.to).getContent();
-        if (isJumpLandingHere(motion.to)) {
-            capturedPiece = ".";
-        }
-        const std::string pieceToPlace = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
-
-        board.setCell(motion.to, pieceToPlace);
-        board.setCell(motion.from, ".");
-
-        arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
-    }
-
-    for (auto& slot : active) {
-        if (!slot || slot->from != slot->to || clockMs < slot->arrivalTime) {
+    for (const PendingArrival& item : pending) {
+        auto& slot = active[static_cast<size_t>(item.slotIndex)];
+        if (!slot) {
             continue;
         }
 
         const Motion motion = *slot;
         slot.reset();
 
-        const std::string occupant = board.getCell(motion.to).getContent();
-        const std::string capturedPiece = (occupant == "." || occupant == motion.piece) ? "." : occupant;
+        if (item.isJump) {
+            const std::string occupant = board.getCell(motion.to).getContent();
+            const std::string capturedPiece =
+                (occupant == "." || occupant == motion.piece) ? "." : occupant;
 
-        board.setCell(motion.to, motion.piece);
+            board.setCell(motion.to, motion.piece);
+            arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
+        } else {
+            std::string capturedPiece = board.getCell(motion.to).getContent();
+            if (capturedPiece == motion.piece) {
+                capturedPiece = ".";
+            }
+            const std::string pieceToPlace = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
 
-        arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
+            board.setCell(motion.to, pieceToPlace);
+            board.setCell(motion.from, ".");
+
+            arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
+        }
     }
 
     return arrivals;
