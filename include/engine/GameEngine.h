@@ -3,6 +3,7 @@
 #include "model/Board.h"
 #include "model/GameState.h"
 #include "realtime/MotionView.h"
+#include "realtime/RestView.h"
 #include "rules/RuleEngine.h"
 #include "realtime/RealTimeArbiter.h"
 
@@ -22,6 +23,8 @@ public:
     void wait(int ms);
     GameSnapshot snapshot() const;
     std::vector<MotionView> activeMotions() const;
+    std::vector<RestView> activeRests() const;
+    bool isResting(const Position& at) const;
     std::set<Position> legalMovesFrom(const Position& from) const;
     bool isGameOver() const;
     int rowCount() const;

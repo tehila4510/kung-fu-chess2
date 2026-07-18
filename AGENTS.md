@@ -11,7 +11,7 @@ C++17 console game that reads board setup and commands from stdin.
 include/
 ├── model/       Board, Piece, Position, GameState
 ├── rules/       IPieceRules strategies (one *Rules.{h,cpp} per piece), RuleEngine
-├── realtime/    Motion, RealTimeArbiter
+├── realtime/    Motion, MotionView, Rest, RestView, RealTimeArbiter
 ├── engine/      GameEngine
 ├── io/          BoardParser, BoardPrinter (IBoardPrinter)
 ├── input/       Controller, BoardMapper
@@ -80,9 +80,11 @@ main/App → input/view/io → engine → rules/realtime → model
 ### Cross-boundary DTOs
 
 - `MoveValidation` — rule check result (`is_valid`, `reason`)
-- `MoveResult` — engine accept/reject (`is_accepted`, `reason`)
+- `MoveResult` / `MoveOutcome` — engine accept/reject (`is_accepted`, `reason`)
 - `GameSnapshot` — read-only board + state for view
 - `ArrivalEvent` — piece landing and capture info from arbiter
+- `MotionView` — in-flight piece for view (`piece`, `from`, `to`, `progress`)
+- `RestView` — post-arrival cooldown for view (`piece`, `at`, `kind`, `remaining`)
 
 ## Input format
 
@@ -92,9 +94,13 @@ main/App → input/view/io → engine → rules/realtime → model
 Errors go to stdout (e.g. `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`).
 
 `jump X Y` lifts the piece at that cell airborne in place (no destination — it always returns to the same
-square) for a fixed 1s duration, bypassing normal per-cell travel time. It lands back down and captures
+square) for a fixed jump duration, bypassing normal per-cell travel time. It lands back down and captures
 whatever occupies the square at that point (an enemy that moved in while it was airborne); it is rejected
-if the cell is empty or that color already has a motion in flight.
+if the cell is empty, that color already has a motion in flight, or the piece is resting.
+
+After any landing the piece rests before it can move or jump again: **long rest** after travel,
+**short rest** after jump (`piece_resting`). Graphics plays `long_rest` / `short_rest` sprites and a
+diminishing yellow (long) or blue (short) cell overlay.
 
 ## Language
 

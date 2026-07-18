@@ -2,11 +2,13 @@
 
 #include "model/Board.h"
 #include "realtime/MotionView.h"
+#include "realtime/RestView.h"
 
 #include <algorithm>
 #include <cctype>
 #include <chrono>
 #include <iostream>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -93,6 +95,20 @@ const std::string& motionState(const MotionView& motion) {
     return (motion.from == motion.to) ? jump : move;
 }
 
+const std::string& restState(RestKind kind) {
+    static const std::string short_rest = graphics::kShortRestState;
+    static const std::string long_rest = graphics::kLongRestState;
+    return kind == RestKind::Short ? short_rest : long_rest;
+}
+
+std::map<Position, const RestView*> indexRests(const std::vector<RestView>& rests) {
+    std::map<Position, const RestView*> by_cell;
+    for (const RestView& rest : rests) {
+        by_cell[rest.at] = &rest;
+    }
+    return by_cell;
+}
+
 }  // namespace
 
 const std::string GraphicsApplication::kWindowName = "Kung Fu Chess";
@@ -135,8 +151,11 @@ int GraphicsApplication::run() {
         const std::vector<view::PlacedSprite> sprites = buildSprites(dt_seconds);
         const GameSnapshot snapshot = engine_.snapshot();
         const std::vector<MotionView> motions = engine_.activeMotions();
-        const std::vector<view::CellOverlay> overlays =
+        const std::vector<RestView> rests = engine_.activeRests();
+        std::vector<view::CellOverlay> overlays = buildRestOverlays(rests);
+        const std::vector<view::CellOverlay> legal =
             buildLegalMoveOverlays(snapshot, motions);
+        overlays.insert(overlays.end(), legal.begin(), legal.end());
         const int key = renderer_.showFrame(sprites, overlays, kFrameWaitMs);
         handleMouseClick(view::Img::pollMouseClick(kWindowName));
         if (isExitKey(key) || !renderer_.isOpen()) {
@@ -248,6 +267,8 @@ std::vector<view::PlacedSprite> GraphicsApplication::buildSprites(
     double dt_seconds) {
     const GameSnapshot snapshot = engine_.snapshot();
     const std::vector<MotionView> motions = engine_.activeMotions();
+    const std::vector<RestView> rests = engine_.activeRests();
+    const std::map<Position, const RestView*> rests_by_cell = indexRests(rests);
 
     std::set<Position> motion_sources;
     for (const MotionView& motion : motions) {
@@ -256,6 +277,7 @@ std::vector<view::PlacedSprite> GraphicsApplication::buildSprites(
 
     pruneStaleVisuals(snapshot, motions);
 
+    std::set<Position> live_rest_cells;
     std::vector<view::PlacedSprite> sprites;
 
     for (int row = 0; row < static_cast<int>(snapshot.cells.size()); ++row) {
@@ -278,11 +300,39 @@ std::vector<view::PlacedSprite> GraphicsApplication::buildSprites(
             }
 
             graphics::PieceVisual& visual = ensureVisual(cell, asset_code);
-            graphics::Animation& idle =
-                visual.animationFor(graphics::kIdleState);
-            idle.update(dt_seconds);
-            sprites.push_back(
-                placeSprite(idle.current_frame(), row, col, cell_w_, cell_h_));
+            const RestView* rest = nullptr;
+            const auto rest_it = rests_by_cell.find(cell);
+            if (rest_it != rests_by_cell.end()) {
+                rest = rest_it->second;
+            }
+
+            if (rest != nullptr) {
+                live_rest_cells.insert(cell);
+                graphics::Animation& anim = visual.animationFor(restState(rest->kind));
+                const auto prev = rest_anim_keys_.find(cell);
+                if (prev == rest_anim_keys_.end() || prev->second != rest->kind) {
+                    anim.reset();
+                    rest_anim_keys_[cell] = rest->kind;
+                }
+                anim.update(dt_seconds);
+                sprites.push_back(
+                    placeSprite(anim.current_frame(), row, col, cell_w_, cell_h_));
+            } else {
+                rest_anim_keys_.erase(cell);
+                graphics::Animation& idle =
+                    visual.animationFor(graphics::kIdleState);
+                idle.update(dt_seconds);
+                sprites.push_back(
+                    placeSprite(idle.current_frame(), row, col, cell_w_, cell_h_));
+            }
+        }
+    }
+
+    for (auto it = rest_anim_keys_.begin(); it != rest_anim_keys_.end();) {
+        if (live_rest_cells.count(it->first) == 0) {
+            it = rest_anim_keys_.erase(it);
+        } else {
+            ++it;
         }
     }
 
@@ -301,6 +351,26 @@ std::vector<view::PlacedSprite> GraphicsApplication::buildSprites(
     }
 
     return sprites;
+}
+
+std::vector<view::CellOverlay> GraphicsApplication::buildRestOverlays(
+    const std::vector<RestView>& rests) const {
+    std::vector<view::CellOverlay> overlays;
+    overlays.reserve(rests.size());
+
+    for (const RestView& rest : rests) {
+        view::CellOverlay overlay;
+        overlay.kind = rest.kind == RestKind::Short ? view::HighlightKind::ShortRest
+                                                    : view::HighlightKind::LongRest;
+        overlay.cell_x = rest.at.col * cell_w_;
+        overlay.cell_y = rest.at.row * cell_h_;
+        overlay.cell_w = cell_w_;
+        overlay.cell_h = cell_h_;
+        overlay.remaining = rest.remaining;
+        overlays.push_back(overlay);
+    }
+
+    return overlays;
 }
 
 std::vector<view::CellOverlay> GraphicsApplication::buildLegalMoveOverlays(
@@ -355,12 +425,13 @@ std::vector<view::CellOverlay> GraphicsApplication::buildLegalMoveOverlays(
         }
 
         const std::pair<int, int> center = mapper_.cellCenterPixel(dest);
-        overlays.push_back(view::CellOverlay{
-            center.first,
-            center.second,
-            is_capture ? capture_radius : move_dot_radius,
-            is_capture ? view::HighlightKind::Capture : view::HighlightKind::Move
-        });
+        view::CellOverlay overlay;
+        overlay.center_x = center.first;
+        overlay.center_y = center.second;
+        overlay.radius = is_capture ? capture_radius : move_dot_radius;
+        overlay.kind = is_capture ? view::HighlightKind::Capture
+                                  : view::HighlightKind::Move;
+        overlays.push_back(overlay);
     }
 
     return overlays;

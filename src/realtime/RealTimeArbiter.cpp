@@ -49,6 +49,10 @@ bool RealTimeArbiter::hasActiveTravel(char color) const {
     return slot.has_value() && slot->from != slot->to;
 }
 
+bool RealTimeArbiter::isResting(const Position& at) const {
+    return rests.find(at) != rests.end();
+}
+
 void RealTimeArbiter::startMotion(const std::string& piece, const Position& from, const Position& to) {
     validatePieceTokenOrThrow(piece);
     if (!from.isValid() || !to.isValid()) {
@@ -74,6 +78,14 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
     }
 
     clockMs += ms;
+
+    for (auto it = rests.begin(); it != rests.end();) {
+        if (clockMs >= it->second.endTime) {
+            it = rests.erase(it);
+        } else {
+            ++it;
+        }
+    }
 
     std::vector<ArrivalEvent> arrivals;
     const int lastRow = board.getRowCount() - 1;
@@ -116,25 +128,38 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
         const Motion motion = *slot;
         slot.reset();
 
+        std::string placedPiece = motion.piece;
+        std::string capturedPiece = ".";
+
         if (item.isJump) {
             const std::string occupant = board.getCell(motion.to).getContent();
-            const std::string capturedPiece =
+            capturedPiece =
                 (occupant == "." || occupant == motion.piece) ? "." : occupant;
 
             board.setCell(motion.to, motion.piece);
-            arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
         } else {
-            std::string capturedPiece = board.getCell(motion.to).getContent();
+            capturedPiece = board.getCell(motion.to).getContent();
             if (capturedPiece == motion.piece) {
                 capturedPiece = ".";
             }
-            const std::string pieceToPlace = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
+            placedPiece = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
 
-            board.setCell(motion.to, pieceToPlace);
+            board.setCell(motion.to, placedPiece);
             board.setCell(motion.from, ".");
-
-            arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
         }
+
+        const RestKind kind = item.isJump ? RestKind::Short : RestKind::Long;
+        const long long durationMs =
+            kind == RestKind::Short ? kShortRestMs : kLongRestMs;
+        rests[motion.to] = Rest{
+            motion.to,
+            placedPiece,
+            kind,
+            clockMs + durationMs,
+            durationMs,
+        };
+
+        arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
     }
 
     return arrivals;
@@ -164,6 +189,24 @@ std::vector<MotionView> RealTimeArbiter::activeMotions() const {
         }
 
         views.push_back(MotionView{motion.piece, motion.from, motion.to, progress});
+    }
+
+    return views;
+}
+
+std::vector<RestView> RealTimeArbiter::activeRests() const {
+    std::vector<RestView> views;
+    views.reserve(rests.size());
+
+    for (const auto& entry : rests) {
+        const Rest& rest = entry.second;
+        double remaining = 0.0;
+        if (rest.durationMs > 0) {
+            remaining = static_cast<double>(rest.endTime - clockMs) /
+                        static_cast<double>(rest.durationMs);
+            remaining = std::clamp(remaining, 0.0, 1.0);
+        }
+        views.push_back(RestView{ rest.piece, rest.at, rest.kind, remaining });
     }
 
     return views;

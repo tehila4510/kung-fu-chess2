@@ -8,6 +8,7 @@
 #include "input/BoardMapper.h"
 #include "input/Controller.h"
 #include "model/Position.h"
+#include "realtime/RestView.h"
 #include "view/Img.h"
 #include "view/Renderer.h"
 
@@ -29,6 +30,8 @@ private:
     std::vector<view::PlacedSprite> buildSprites(double dt_seconds);
     std::vector<view::CellOverlay> buildLegalMoveOverlays(
         const GameSnapshot& snapshot, const std::vector<MotionView>& motions) const;
+    std::vector<view::CellOverlay> buildRestOverlays(
+        const std::vector<RestView>& rests) const;
     void pruneStaleVisuals(const GameSnapshot& snapshot,
                            const std::vector<MotionView>& motions);
     graphics::PieceVisual& ensureVisual(const Position& cell, const std::string& token);
@@ -47,6 +50,8 @@ private:
     BoardMapper mapper_;
     graphics::AnimationCache cache_;
     std::map<Position, graphics::PieceVisual> visuals_;
+    // Tracks which rest kind was last shown so animation resets on landing.
+    std::map<Position, RestKind> rest_anim_keys_;
     view::Renderer renderer_;
 };
 

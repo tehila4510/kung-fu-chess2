@@ -18,13 +18,21 @@ struct PlacedSprite {
 
 enum class HighlightKind {
     Move,
-    Capture
+    Capture,
+    LongRest,
+    ShortRest
 };
 
 struct CellOverlay {
     int center_x = 0;
     int center_y = 0;
     int radius = 0;
+    // Used by rest cooldown overlays (cell rectangle + remaining fraction).
+    int cell_x = 0;
+    int cell_y = 0;
+    int cell_w = 0;
+    int cell_h = 0;
+    double remaining = 0.0;
     HighlightKind kind = HighlightKind::Move;
 };
 

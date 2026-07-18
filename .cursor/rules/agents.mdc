@@ -48,7 +48,7 @@ alwaysApply: true
 include/
 ├── model/       Board, Piece, Position, GameState
 ├── rules/       IPieceRules strategies (one *Rules.{h,cpp} per piece), RuleEngine
-├── realtime/    Motion, RealTimeArbiter
+├── realtime/    Motion, MotionView, Rest, RestView, RealTimeArbiter
 ├── engine/      GameEngine
 ├── io/          BoardParser, BoardPrinter (IBoardPrinter)
 ├── input/       Controller, BoardMapper
@@ -88,7 +88,7 @@ main/App → input/view/io → engine → rules/realtime → model
 ### Patterns
 
 - **Strategy**: `IPieceRules` per piece; `RuleEngine` maps kind → strategy (`unordered_map<char, unique_ptr<IPieceRules>>`)
-- **DTO**: `MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`
+- **DTO**: `MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`, `MotionView`, `RestView`
 - **Facade**: `GameEngine` is the single game-logic entry point
 - **Snapshot**: view never mutates `Board` directly
 
@@ -97,9 +97,11 @@ main/App → input/view/io → engine → rules/realtime → model
 1. Board rows until `Board:` marker (tokens: `.`, `wK`, `bQ`)
 2. `Commands:` — `click X Y`, `jump X Y`, `wait MS`, `print board`
 3. Errors to stdout: `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMATCH`
-4. `jump X Y` lifts the piece at that cell airborne in place for a fixed 1s duration (bypasses normal
-   travel time since it never changes squares); it lands back down and captures whatever occupies the
-   square by then. Rejected if the cell is empty or that color already has a motion in flight.
+4. `jump X Y` lifts the piece at that cell airborne in place for a fixed jump duration (bypasses normal
+ travel time since it never changes squares); it lands back down and captures whatever occupies the
+ square by then. Rejected if the cell is empty, that color already has a motion in flight, or the
+ piece is resting. After landing: travel starts a long rest, jump starts a short rest (`piece_resting`
+ until the cooldown ends).
 
 ## Code style
 

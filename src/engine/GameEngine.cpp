@@ -37,6 +37,9 @@ MoveOutcome GameEngine::requestMove(const Position& from, const Position& to) {
 
         const Cell& moverCell = board.getCell(from);
         const std::string& mover = moverCell.getContent();
+        if (arbiter.isResting(from)) {
+            return { false, "piece_resting" };
+        }
         if (mover.size() == 2) {
             const char color = mover[0];
             if (arbiter.hasActiveMotion(color)) {
@@ -66,6 +69,9 @@ MoveOutcome GameEngine::requestJump(const Position& at) {
         const std::string& piece = cell.getContent();
         if (cell.isEmpty()) {
             return { false, "empty_source" };
+        }
+        if (arbiter.isResting(at)) {
+            return { false, "piece_resting" };
         }
         if (arbiter.hasActiveMotion(piece[0])) {
             return { false, "move_in_flight" };
@@ -112,8 +118,19 @@ std::vector<MotionView> GameEngine::activeMotions() const {
     return arbiter.activeMotions();
 }
 
+std::vector<RestView> GameEngine::activeRests() const {
+    return arbiter.activeRests();
+}
+
+bool GameEngine::isResting(const Position& at) const {
+    return arbiter.isResting(at);
+}
+
 std::set<Position> GameEngine::legalMovesFrom(const Position& from) const {
     try {
+        if (arbiter.isResting(from)) {
+            return {};
+        }
         const Board& board = gameState.getBoard();
         return ruleEngine.legalMoves(board, from, airborneForValidation(arbiter));
     } catch (const std::exception&) {

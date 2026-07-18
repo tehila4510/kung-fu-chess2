@@ -33,6 +33,10 @@ public:
     void draw_ring(int center_x, int center_y, int radius, const cv::Scalar& bgr,
                    int thickness);
 
+    // Blends a filled rectangle onto the image. alpha is in [0, 1].
+    void draw_filled_rect(int x, int y, int w, int h, const cv::Scalar& bgr,
+                          double alpha);
+
     void show() const;
 
     Img clone() const;

@@ -9,8 +9,27 @@ namespace {
 
 const cv::Scalar kBlack(20, 20, 20);
 const cv::Scalar kWhite(255, 255, 255);
+const cv::Scalar kLongRestYellow(0, 220, 255);
+const cv::Scalar kShortRestBlue(255, 120, 40);
+constexpr double kRestOverlayAlpha = 0.45;
 
 void drawOverlay(Img& frame, const CellOverlay& overlay) {
+    if (overlay.kind == HighlightKind::LongRest || overlay.kind == HighlightKind::ShortRest) {
+        if (overlay.cell_w <= 0 || overlay.cell_h <= 0 || overlay.remaining <= 0.0) {
+            return;
+        }
+
+        const double remaining = std::clamp(overlay.remaining, 0.0, 1.0);
+        const int fill_h = std::max(1, static_cast<int>(overlay.cell_h * remaining));
+        const int fill_y = overlay.cell_y + overlay.cell_h - fill_h;
+        const cv::Scalar& color = overlay.kind == HighlightKind::LongRest
+                                     ? kLongRestYellow
+                                     : kShortRestBlue;
+        frame.draw_filled_rect(overlay.cell_x, fill_y, overlay.cell_w, fill_h, color,
+                               kRestOverlayAlpha);
+        return;
+    }
+
     if (overlay.radius <= 0) {
         return;
     }

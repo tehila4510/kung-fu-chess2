@@ -122,11 +122,13 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
     }
 
     SUBCASE("traveler captures jumper when move started before the jump at same tick") {
+        // Distance 5 matches kJumpDurationMs so both land on the same clock tick;
+        // later startSeq (the jump) resolves first, then the traveler captures.
         Board board = loadBoard({
-            "bP . . wR",
-            ". . . ." });
+            "bP . . . . wR",
+            ". . . . . ." });
         RealTimeArbiter arb;
-        arb.startMotion("wR", { 0, 3 }, { 0, 0 });
+        arb.startMotion("wR", { 0, 5 }, { 0, 0 });
         arb.startJump("bP", { 0, 0 });
         board.setCell({ 0, 0 }, ".");
 

@@ -40,7 +40,7 @@ GraphicsApplication → graphics/ → view(Img)
 ## Design patterns
 
 - **Strategy**: one `IPieceRules` per piece type; `RuleEngine` maps piece kind → strategy via `unordered_map<char, unique_ptr<IPieceRules>>`
-- **DTO**: cross-boundary structs (`MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`) — plain data, no behavior
+- **DTO**: cross-boundary structs (`MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`, `MotionView`, `RestView`) — plain data, no behavior
 - **Facade**: `GameEngine` is the single entry point for game logic from input/I/O layers
 - **Snapshot**: view reads `GameSnapshot`; never mutates `Board` directly
 

@@ -9,21 +9,24 @@ alwaysApply: false
 ## GameEngine
 
 - Owns `Board`, `RuleEngine`, `RealTimeArbiter`, and `gameOver` flag
-- Public API: `setup`, `requestMove`, `wait`, `snapshot`, `isGameOver`
+- Public API: `setup`, `requestMove`, `requestJump`, `wait`, `snapshot`, `activeMotions`, `activeRests`, `isGameOver`
 - `setup(Board)`: takes an already-parsed board; the engine never parses text. Text → `Board` is `io/BoardParser`'s job (invoked by the composition root)
-- `requestMove`: validate via `RuleEngine`, then delegate motion to arbiter or apply instantly per game rules
-- Concurrency: a color is blocked while its own piece is in flight (`move_in_flight`); it is also blocked while the **opponent** has a travelling piece in flight (`common_route`) — opposite colors never travel concurrently. A stationary jump (`from == to`) does not occupy a route and does not block the opponent
+- `requestMove` / `requestJump`: validate via `RuleEngine`, then delegate motion to arbiter
+- Concurrency: a color is blocked while its own piece is in flight (`move_in_flight`). Opposite colors may travel concurrently. A stationary jump (`from == to`) does not occupy a travel route
+- Per-piece rest: after landing, a piece must rest before moving/jumping again (`piece_resting`). Travel → long rest (`kLongRestMs`); jump → short rest (`kShortRestMs`)
 - `snapshot()`: build immutable `GameSnapshot` for view — no live references to internal state
+- Rest/motion for the view: `activeRests()` / `activeMotions()` return DTO vectors (`RestView`, `MotionView`)
 
 ```cpp
-struct MoveResult { bool is_accepted; std::string reason; };
+struct MoveOutcome { bool is_accepted; std::string reason; };
 ```
 
 ## Realtime
 
 - `Motion`: in-flight piece move with `arrivalTime` on game clock
-- `RealTimeArbiter::advanceTime(ms, board)`: advance clock, resolve arrivals, mutate board on landing
-- Return `std::optional<ArrivalEvent>` when a piece arrives; empty when nothing resolved
+- `Rest`: post-arrival cooldown keyed by cell (`RestKind::Short` / `RestKind::Long`)
+- `RealTimeArbiter::advanceTime(ms, board)`: advance clock, expire rests, resolve arrivals, mutate board on landing, start rest for the landed piece
+- Returns `std::vector<ArrivalEvent>` for pieces that arrived this tick
 
 ## Separation
 

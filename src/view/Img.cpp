@@ -154,7 +154,7 @@ void Img::draw_solid_disc(int center_x, int center_y, int radius, const cv::Scal
 }
 
 void Img::draw_ring(int center_x, int center_y, int radius, const cv::Scalar& bgr,
-                    int thickness) {
+                   int thickness) {
     if (img.empty()) {
         throw std::runtime_error("Image not loaded.");
     }
@@ -162,6 +162,34 @@ void Img::draw_ring(int center_x, int center_y, int radius, const cv::Scalar& bg
         throw std::invalid_argument("Highlight radius and thickness must be positive.");
     }
     cv::circle(img, cv::Point(center_x, center_y), radius, bgr, thickness, cv::LINE_AA);
+}
+
+void Img::draw_filled_rect(int x, int y, int w, int h, const cv::Scalar& bgr,
+                           double alpha) {
+    if (img.empty()) {
+        throw std::runtime_error("Image not loaded.");
+    }
+    if (w <= 0 || h <= 0) {
+        return;
+    }
+
+    const double a = std::clamp(alpha, 0.0, 1.0);
+    if (a <= 0.0) {
+        return;
+    }
+
+    const int x0 = std::max(0, x);
+    const int y0 = std::max(0, y);
+    const int x1 = std::min(img.cols, x + w);
+    const int y1 = std::min(img.rows, y + h);
+    if (x0 >= x1 || y0 >= y1) {
+        return;
+    }
+
+    const cv::Rect roi(x0, y0, x1 - x0, y1 - y0);
+    cv::Mat region = img(roi);
+    cv::Mat tint(region.size(), region.type(), bgr);
+    cv::addWeighted(tint, a, region, 1.0 - a, 0.0, region);
 }
 
 void Img::show() const {
