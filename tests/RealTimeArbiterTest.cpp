@@ -105,6 +105,26 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         CHECK_FALSE(arb.hasActiveMotion('b'));
     }
 
+    SUBCASE("pursuer lands on fled square without capturing or vanishing") {
+        Board board = loadBoard({ "wR bK . ." });
+        RealTimeArbiter arb;
+        arb.startMotion("wR", { 0, 0 }, { 0, 1 });
+        arb.startMotion("bK", { 0, 1 }, { 0, 3 });
+
+        auto mid = arb.advanceTime(1000, board);
+        REQUIRE(mid.size() == 1);
+        CHECK(mid[0].capturedPiece == ".");
+        CHECK(board.getCell({ 0, 1 }).getContent() == "wR");
+        CHECK(arb.hasActiveMotion('b'));
+
+        auto end = arb.advanceTime(2000, board);
+        REQUIRE(end.size() == 1);
+        CHECK(end[0].capturedPiece == ".");
+        CHECK(board.getCell({ 0, 1 }).getContent() == "wR");
+        CHECK(board.getCell({ 0, 3 }).getContent() == "bK");
+        CHECK_FALSE(arb.hasActiveMotion());
+    }
+
     SUBCASE("traveler enters jump square while jumper is airborne then gets captured on landing") {
         Board board = loadBoard({
             "bP wR .",

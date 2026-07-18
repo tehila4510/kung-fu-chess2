@@ -34,6 +34,20 @@ void validatePieceTokenOrThrow(const std::string& piece) {
     }
 }
 
+bool isFleeingFrom(
+    const std::optional<Motion> active[],
+    int colorCount,
+    const Position& at,
+    const std::string& occupant) {
+    for (int i = 0; i < colorCount; ++i) {
+        const auto& slot = active[i];
+        if (slot && slot->piece == occupant && slot->from == at && slot->from != slot->to) {
+            return true;
+        }
+    }
+    return false;
+}
+
 } // namespace
 
 bool RealTimeArbiter::hasActiveMotion() const {
@@ -138,14 +152,18 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
 
             board.setCell(motion.to, motion.piece);
         } else {
-            capturedPiece = board.getCell(motion.to).getContent();
-            if (capturedPiece == motion.piece) {
-                capturedPiece = ".";
+            const std::string occupant = board.getCell(motion.to).getContent();
+            if (occupant != "." && occupant != motion.piece
+                && !isFleeingFrom(active, kColorCount, motion.to, occupant)) {
+                capturedPiece = occupant;
             }
             placedPiece = promotePawnIfNeeded(motion.piece, motion.to, lastRow);
 
             board.setCell(motion.to, placedPiece);
-            board.setCell(motion.from, ".");
+            // Only vacate origin if we still own it; a pursuer may have landed there.
+            if (board.getCell(motion.from).getContent() == motion.piece) {
+                board.setCell(motion.from, ".");
+            }
         }
 
         const RestKind kind = item.isJump ? RestKind::Short : RestKind::Long;
