@@ -40,7 +40,8 @@ class Renderer {
 public:
     Renderer(Img background, std::string window_name);
     int showFrame(const std::vector<PlacedSprite>& sprites,
-                  const std::vector<CellOverlay>& overlays, int wait_ms) const;
+                  const std::vector<CellOverlay>& overlays, int wait_ms,
+                  const std::string& banner_text = "") const;
 
     bool isOpen() const;
 

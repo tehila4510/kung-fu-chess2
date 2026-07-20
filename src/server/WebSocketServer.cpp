@@ -7,7 +7,7 @@
 
 WebSocketServer::WebSocketServer()
     : moveLog_(std::cout),
-      sound_(std::cout) {
+      sound_("assets/sounds", std::cout) {
     session_.bus().subscribe(&moveLog_);
     session_.bus().subscribe(&sound_);
 

@@ -94,36 +94,39 @@ void GameSession::startNewGame() {
 void GameSession::publishArrivals(const GameSnapshot& before,
                                   const GameSnapshot& after) {
     const int rows = static_cast<int>(before.cells.size());
-    for (int r = 0; r < rows; ++r) {
-        const int cols = static_cast<int>(before.cells[static_cast<size_t>(r)].size());
-        for (int c = 0; c < cols; ++c) {
-            const std::string& prev =
-                before.cells[static_cast<size_t>(r)][static_cast<size_t>(c)];
-            const std::string& next =
-                after.cells[static_cast<size_t>(r)][static_cast<size_t>(c)];
-            if (prev == "." || prev == next || next == ".") {
-                continue;
-            }
-            if (prev.size() == 2 && next.size() == 2 && prev[0] != next[0]) {
-                GameEvent captured;
-                captured.type = GameEventType::PieceCaptured;
-                captured.color = (next[0] == 'w') ? 'W' : 'B';
-                captured.piece = next;
-                captured.capturedPiece = prev;
-                captured.to = protocol::positionToSquare(Position{ r, c }, rows);
-                publish(captured);
+    for (const ArrivalEvent& arrival : engine_.lastArrivals()) {
+        if (arrival.piece.size() < 2) {
+            continue;
+        }
+        if (arrival.capturedPiece != "." && !arrival.capturedPiece.empty()) {
+            GameEvent captured;
+            captured.type = GameEventType::PieceCaptured;
+            captured.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
+            captured.piece = arrival.piece;
+            captured.capturedPiece = arrival.capturedPiece;
+            captured.to = protocol::positionToSquare(arrival.at, rows);
+            publish(captured);
 
-                if (captured.color == 'W') {
-                    ++whiteScore_;
-                } else {
-                    ++blackScore_;
-                }
-                GameEvent score;
-                score.type = GameEventType::ScoreUpdated;
-                score.whiteScore = whiteScore_;
-                score.blackScore = blackScore_;
-                publish(score);
+            if (captured.color == 'W') {
+                ++whiteScore_;
+            } else {
+                ++blackScore_;
             }
+            GameEvent score;
+            score.type = GameEventType::ScoreUpdated;
+            score.whiteScore = whiteScore_;
+            score.blackScore = blackScore_;
+            publish(score);
+        }
+
+        if (arrival.promoted) {
+            GameEvent promoted;
+            promoted.type = GameEventType::PiecePromoted;
+            promoted.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
+            promoted.piece = arrival.piece;
+            promoted.to = protocol::positionToSquare(arrival.at, rows);
+            promoted.reason = "pawn_to_queen";
+            publish(promoted);
         }
     }
 

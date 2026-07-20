@@ -1,5 +1,6 @@
 #include "GraphicsApplication.h"
 
+#include "bus/GameEvent.h"
 #include "model/Board.h"
 #include "realtime/MotionView.h"
 #include "realtime/RestView.h"
@@ -112,6 +113,7 @@ std::map<Position, const RestView*> indexRests(const std::vector<RestView>& rest
 }  // namespace
 
 const std::string GraphicsApplication::kWindowName = "Kung Fu Chess";
+const std::string GraphicsApplication::kSoundsDir = "assets/sounds";
 
 GraphicsApplication::GraphicsApplication(graphics::BoardLayout layout,
                                          view::Img background)
@@ -124,8 +126,63 @@ GraphicsApplication::GraphicsApplication(graphics::BoardLayout layout,
       mapper_(cell_w_, cell_h_, layout_.cols, layout_.rows),
       cache_(),
       visuals_(),
-      renderer_(std::move(background), kWindowName) {
+      renderer_(std::move(background), kWindowName),
+      sound_(kSoundsDir, std::cout) {
+    bus_.subscribe(&sound_);
     engine_.setup(Board(toEngineGrid(layout_.cells)));
+    GameEvent started;
+    started.type = GameEventType::GameStarted;
+    publish(started);
+}
+
+GraphicsApplication::~GraphicsApplication() {
+    bus_.unsubscribe(&sound_);
+}
+
+void GraphicsApplication::publish(const GameEvent& event) {
+    bus_.publish(event);
+}
+
+std::string GraphicsApplication::pieceAt(const Position& at) const {
+    const GameSnapshot snap = engine_.snapshot();
+    if (at.row < 0 || at.col < 0 ||
+        at.row >= static_cast<int>(snap.cells.size()) ||
+        at.col >= static_cast<int>(snap.cells[static_cast<size_t>(at.row)].size())) {
+        return ".";
+    }
+    return snap.cells[static_cast<size_t>(at.row)][static_cast<size_t>(at.col)];
+}
+
+void GraphicsApplication::publishArrivals(const GameSnapshot& before,
+                                          const GameSnapshot& after) {
+    for (const ArrivalEvent& arrival : engine_.lastArrivals()) {
+        if (arrival.piece.size() < 2) {
+            continue;
+        }
+        if (arrival.capturedPiece != "." && !arrival.capturedPiece.empty()) {
+            GameEvent captured;
+            captured.type = GameEventType::PieceCaptured;
+            captured.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
+            captured.piece = arrival.piece;
+            captured.capturedPiece = arrival.capturedPiece;
+            publish(captured);
+        }
+        if (arrival.promoted) {
+            GameEvent promoted;
+            promoted.type = GameEventType::PiecePromoted;
+            promoted.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
+            promoted.piece = arrival.piece;
+            promoted.reason = "pawn_to_queen";
+            publish(promoted);
+        }
+    }
+
+    if (!before.gameOver && after.gameOver) {
+        GameEvent ended;
+        ended.type = GameEventType::GameEnded;
+        ended.reason = "king_captured";
+        publish(ended);
+    }
 }
 
 int GraphicsApplication::run() {
@@ -145,7 +202,9 @@ int GraphicsApplication::run() {
             static_cast<int>(std::min(dt_seconds * 1000.0,
                                       static_cast<double>(kMaxFrameStepMs)));
         if (dt_ms > 0) {
+            const GameSnapshot before = engine_.snapshot();
             engine_.wait(dt_ms);
+            publishArrivals(before, engine_.snapshot());
         }
 
         const std::vector<view::PlacedSprite> sprites = buildSprites(dt_seconds);
@@ -156,7 +215,8 @@ int GraphicsApplication::run() {
         const std::vector<view::CellOverlay> legal =
             buildLegalMoveOverlays(snapshot, motions);
         overlays.insert(overlays.end(), legal.begin(), legal.end());
-        const int key = renderer_.showFrame(sprites, overlays, kFrameWaitMs);
+        const std::string banner = snapshot.gameOver ? "GAME OVER" : "";
+        const int key = renderer_.showFrame(sprites, overlays, kFrameWaitMs, banner);
         handleMouseClick(view::Img::pollMouseClick(kWindowName));
         if (isExitKey(key) || !renderer_.isOpen()) {
             break;
@@ -177,37 +237,71 @@ void GraphicsApplication::handleMouseClick(
     const std::optional<Position> cell = mapper_.pixelToCell(click->x, click->y);
     if (!cell) {
         if (!click->is_double) {
+            const bool hadSelection = controller_.hasActiveSelection();
             controller_.clearSelection();
+            if (hadSelection) {
+                GameEvent cleared;
+                cleared.type = GameEventType::SelectionCleared;
+                publish(cleared);
+            }
         }
         std::cout << "Click off board at (" << click->x << ", " << click->y << ")\n";
         return;
     }
 
     if (click->is_double) {
+        const std::string piece = pieceAt(*cell);
         const MoveOutcome result = controller_.jump(*cell);
         if (result.is_accepted) {
             std::cout << "Jump accepted at (" << cell->row << ", " << cell->col << ")\n";
+            GameEvent jumpEvent;
+            jumpEvent.type = GameEventType::JumpMade;
+            jumpEvent.color = (piece.size() == 2 && piece[0] == 'w') ? 'W' : 'B';
+            jumpEvent.piece = piece;
+            publish(jumpEvent);
         } else {
             std::cout << "Jump rejected: " << result.reason << '\n';
         }
         return;
     }
 
+    const bool hadSelection = controller_.hasActiveSelection();
+    const Position from = hadSelection ? controller_.selectedCell() : Position{};
+    const std::string mover = hadSelection ? pieceAt(from) : std::string(".");
     const ClickResult result = controller_.click(*cell);
     switch (result.outcome) {
-        case ClickOutcome::Selected:
+        case ClickOutcome::Selected: {
             std::cout << "Selected piece at (" << cell->row << ", " << cell->col
                       << ")\n";
+            const std::string piece = pieceAt(*cell);
+            GameEvent selected;
+            selected.type = GameEventType::PieceSelected;
+            selected.color = (piece.size() == 2 && piece[0] == 'w') ? 'W' : 'B';
+            selected.piece = piece;
+            publish(selected);
             break;
-        case ClickOutcome::Cleared:
+        }
+        case ClickOutcome::Cleared: {
             std::cout << "Selection cleared\n";
+            GameEvent cleared;
+            cleared.type = GameEventType::SelectionCleared;
+            publish(cleared);
             break;
+        }
         case ClickOutcome::MoveRequested:
             if (result.moveResult.is_accepted) {
                 std::cout << "Move accepted to (" << cell->row << ", " << cell->col
                           << ")\n";
+                GameEvent moveEvent;
+                moveEvent.type = GameEventType::MoveMade;
+                moveEvent.color = (mover.size() == 2 && mover[0] == 'w') ? 'W' : 'B';
+                moveEvent.piece = mover;
+                publish(moveEvent);
             } else {
                 std::cout << "Move rejected: " << result.moveResult.reason << '\n';
+                GameEvent cleared;
+                cleared.type = GameEventType::SelectionCleared;
+                publish(cleared);
             }
             break;
         case ClickOutcome::Ignored:

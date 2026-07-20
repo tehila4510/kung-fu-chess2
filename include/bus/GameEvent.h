@@ -7,6 +7,9 @@ enum class GameEventType {
     MoveMade,
     JumpMade,
     PieceCaptured,
+    PiecePromoted,
+    PieceSelected,
+    SelectionCleared,
     GameEnded,
     ScoreUpdated,
     GameStarted

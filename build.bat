@@ -42,7 +42,7 @@ if /i "%~1"=="server" (
     set SERVER_SOURCES=src\server_main.cpp src\server\WebSocketServer.cpp src\server\GameSession.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\MoveLogSubscriber.cpp src\bus\SoundSubscriber.cpp src\protocol\Algebraic.cpp src\protocol\CommandParser.cpp src\protocol\StateSerializer.cpp src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp
     set SERVER_FLAGS=-std=c++17 -Iinclude -Ithird_party\websocketpp -Ithird_party\asio\asio\include -Ithird_party\json\single_include -DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_ -D_WEBSOCKETPP_CPP11_THREAD_ -D_WIN32_WINNT=0x0601 -Wall -Wextra -Wpedantic
     rem Use !var! — %%var%% is empty inside this if-block (EnableDelayedExpansion).
-    "%GPP%" !SERVER_FLAGS! !SERVER_SOURCES! -o build\KungFuChessServer.exe -lws2_32 -lwsock32
+    "%GPP%" !SERVER_FLAGS! !SERVER_SOURCES! -o build\KungFuChessServer.exe -lws2_32 -lwsock32 -lwinmm
     if errorlevel 1 exit /b 1
     echo Built: build\KungFuChessServer.exe
     echo Listening on ws://localhost:9002 — press Ctrl+C to stop.
@@ -129,9 +129,9 @@ if /i "%~1"=="graphics" (
     )
 
     call "!VCVARS!"
-    set GRAPHICS_ENGINE_SOURCES=src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\input\BoardMapper.cpp src\input\Controller.cpp
+    set GRAPHICS_ENGINE_SOURCES=src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\input\BoardMapper.cpp src\input\Controller.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\SoundSubscriber.cpp
     set GRAPHICS_SOURCES=src\graphics_main.cpp src\GraphicsApplication.cpp src\view\Img.cpp src\view\Renderer.cpp src\graphics\Animation.cpp src\graphics\AnimationLoader.cpp src\graphics\AnimationCache.cpp src\graphics\PieceVisual.cpp src\graphics\GraphicsConfigLoader.cpp src\graphics\AssetPaths.cpp src\graphics\BoardLayout.cpp src\graphics\FileFrameSource.cpp src\graphics\FileBoardSource.cpp src\graphics\FileConfigSource.cpp src\graphics\BoardLayoutLoader.cpp !GRAPHICS_ENGINE_SOURCES!
-    cl /nologo /EHsc /std:c++17 /Iinclude /I!OPENCV_INC! /Fo:build\ !GRAPHICS_SOURCES! /Fe:build\KungFuChessGraphics.exe /link /LIBPATH:!OPENCV_BIN! opencv_world451.lib user32.lib gdi32.lib
+    cl /nologo /EHsc /std:c++17 /Iinclude /I!OPENCV_INC! /Fo:build\ !GRAPHICS_SOURCES! /Fe:build\KungFuChessGraphics.exe /link /LIBPATH:!OPENCV_BIN! opencv_world451.lib user32.lib gdi32.lib winmm.lib
     if errorlevel 1 exit /b 1
     copy /Y "!OPENCV_BIN!\opencv_world451.dll" build\ >nul
     echo Built: build\KungFuChessGraphics.exe

@@ -37,6 +37,8 @@ CMakeLists.txt   optional CMake build
 > reference, then calls `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:`
 > protocol and replays it against the `model/rules/realtime/engine/input/io` layers.
 > `src/server_main.cpp` hosts the WebSocket server (`GameSession` + `EventBus` over existing `GameEngine`).
+> `SoundSubscriber` plays WAV cues from `assets/sounds/` (`select`, `deselect`, `move`, `jump`, `capture`, `promote`, `game_end`, `game_start`).
+> Graphics draws a centered **GAME OVER** banner when `GameSnapshot::gameOver` is true.
 
 ## Build & verify
 
@@ -85,7 +87,7 @@ server_main → server/protocol/bus → engine → rules/realtime → model
 | Engine | `GameEngine` | Orchestrates model + rules + realtime; exposes `MoveResult`, `GameSnapshot` |
 | I/O | `BoardParser`, `BoardPrinter` | Parse and serialize board text |
 | Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
-| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI |
+| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, …) |
 | Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls |
 | Server | `GameSession`, `WebSocketServer` | Network host; auto-tick; W/B seats (no rooms/auth yet) |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — depends on `Img` only |

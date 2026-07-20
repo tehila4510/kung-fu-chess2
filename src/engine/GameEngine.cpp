@@ -90,12 +90,16 @@ void GameEngine::wait(int ms) {
         throw std::invalid_argument("wait milliseconds must be non-negative");
     }
 
-    const std::vector<ArrivalEvent> arrivals = arbiter.advanceTime(ms, gameState.getBoard());
-    for (const ArrivalEvent& arrival : arrivals) {
+    lastArrivals_ = arbiter.advanceTime(ms, gameState.getBoard());
+    for (const ArrivalEvent& arrival : lastArrivals_) {
         if (isKing(arrival.capturedPiece)) {
             gameState.setGameOver(true);
         }
     }
+}
+
+const std::vector<ArrivalEvent>& GameEngine::lastArrivals() const {
+    return lastArrivals_;
 }
 
 bool GameEngine::isGameOver() const {

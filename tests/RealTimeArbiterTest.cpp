@@ -76,6 +76,8 @@ TEST_CASE("RealTimeArbiter times and resolves motion") {
         auto arrivals = arb.advanceTime(1000, board);
         REQUIRE(arrivals.size() == 1);
         CHECK(board.getCell({ 0, 0 }).getContent() == "wQ");
+        CHECK(arrivals[0].promoted);
+        CHECK(arrivals[0].piece == "wQ");
     }
 
     SUBCASE("both colors move simultaneously and resolve together") {

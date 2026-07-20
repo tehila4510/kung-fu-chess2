@@ -177,7 +177,8 @@ std::vector<ArrivalEvent> RealTimeArbiter::advanceTime(int ms, Board& board) {
             durationMs,
         };
 
-        arrivals.push_back(ArrivalEvent{ motion.to, capturedPiece });
+        const bool promoted = !item.isJump && placedPiece != motion.piece;
+        arrivals.push_back(ArrivalEvent{ motion.to, placedPiece, capturedPiece, promoted });
     }
 
     return arrivals;

@@ -69,6 +69,8 @@ include/
 > against `GameEngine` + `Controller`.
 > `src/server_main.cpp` hosts the WebSocket server: protocol → `GameSession` → existing `GameEngine`,
 > publishing events on the Observer `EventBus` (no rooms/auth yet).
+> `SoundSubscriber` plays WAV cues from `assets/sounds/` (`select`, `deselect`, `move`, `jump`, `capture`,
+> `promote`, `game_end`, `game_start`). Graphics shows a centered **GAME OVER** banner when the game ends.
 
 ## Architecture
 
@@ -87,7 +89,7 @@ server_main → server/protocol/bus → engine → rules/realtime → model
 | Engine | `GameEngine` | Orchestrates model + rules + realtime |
 | I/O | `BoardParser`, `BoardPrinter` | Parse/serialize board text |
 | Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
-| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI |
+| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, …) |
 | Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls |
 | Server | `GameSession`, `WebSocketServer` | Network host; auto-tick; seats W/B |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — via `Img` only |

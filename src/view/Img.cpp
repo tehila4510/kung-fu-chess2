@@ -143,6 +143,22 @@ void Img::put_text(const std::string& txt, int x, int y, double font_size,
                 color, thickness, cv::LINE_AA);
 }
 
+void Img::put_text_centered(const std::string& txt, double font_size,
+                            const cv::Scalar& color, int thickness) {
+    if (img.empty()) {
+        throw std::runtime_error("Image not loaded.");
+    }
+    int baseline = 0;
+    const cv::Size size =
+        cv::getTextSize(txt, cv::FONT_HERSHEY_SIMPLEX, font_size, thickness, &baseline);
+    const int x = (img.cols - size.width) / 2;
+    const int y = (img.rows + size.height) / 2;
+    cv::putText(img, txt, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, font_size,
+                cv::Scalar(0, 0, 0), thickness + 2, cv::LINE_AA);
+    cv::putText(img, txt, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, font_size, color,
+                thickness, cv::LINE_AA);
+}
+
 void Img::draw_solid_disc(int center_x, int center_y, int radius, const cv::Scalar& bgr) {
     if (img.empty()) {
         throw std::runtime_error("Image not loaded.");

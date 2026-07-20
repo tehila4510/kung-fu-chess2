@@ -28,6 +28,11 @@ public:
                   const cv::Scalar& color = cv::Scalar(255, 255, 255, 255),
                   int thickness = 1);
 
+    // Draws centered text; optional outline for readability over busy backgrounds.
+    void put_text_centered(const std::string& txt, double font_size,
+                           const cv::Scalar& color = cv::Scalar(255, 255, 255, 255),
+                           int thickness = 2);
+
     void draw_solid_disc(int center_x, int center_y, int radius, const cv::Scalar& bgr);
 
     void draw_ring(int center_x, int center_y, int radius, const cv::Scalar& bgr,

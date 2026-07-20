@@ -18,7 +18,7 @@ alwaysApply: true
 | Graphics | `graphics/` | `Animation`, `AnimationCache` (`AnimationSpec`), `AnimationLoader`, `BoardLayout`, `PieceVisual` — load/scale sprite frames, play named state animations, read asset board layout; depends on `Img` only |
 | View | `view/` | `Img` (OpenCV wrapper) + `Renderer` — `Renderer` composites `PlacedSprite`s over the board background and drives the window; never mutates `Board` |
 | Text tests | `texttests/` | `ScriptParser`, `ScriptRunner` — scripted stdin integration |
-| Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI events; logic does not know subscribers |
+| Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI events (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, …); logic does not know subscribers |
 | Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in; JSON state/events out |
 | Server | `server/` | `GameSession` + `WebSocketServer` — network host, auto-tick, W/B seats |
 | App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Composition roots: console, graphics, WebSocket server |

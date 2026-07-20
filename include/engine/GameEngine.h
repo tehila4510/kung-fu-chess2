@@ -16,6 +16,7 @@ class GameEngine {
     GameState gameState;
     RuleEngine ruleEngine;
     RealTimeArbiter arbiter;
+    std::vector<ArrivalEvent> lastArrivals_;
 public:
     void setup(Board board);
     MoveOutcome requestMove(const Position& from, const Position& to);
@@ -24,6 +25,7 @@ public:
     GameSnapshot snapshot() const;
     std::vector<MotionView> activeMotions() const;
     std::vector<RestView> activeRests() const;
+    const std::vector<ArrivalEvent>& lastArrivals() const;
     bool isResting(const Position& at) const;
     std::set<Position> legalMovesFrom(const Position& from) const;
     bool isGameOver() const;

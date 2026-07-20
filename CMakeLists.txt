@@ -107,7 +107,7 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         _WIN32_WINNT=0x0601
     )
     if(WIN32)
-        target_link_libraries(KungFuChessServer PRIVATE ws2_32 wsock32)
+        target_link_libraries(KungFuChessServer PRIVATE ws2_32 wsock32 winmm)
     endif()
 else()
     message(STATUS "Server third_party deps missing - skipping KungFuChessServer (see README)")
@@ -138,6 +138,9 @@ if(EXISTS "${OPENCV_DIR}/include")
         src/engine/GameEngine.cpp
         src/input/BoardMapper.cpp
         src/input/Controller.cpp
+        src/bus/EventBus.cpp
+        src/bus/GameEvent.cpp
+        src/bus/SoundSubscriber.cpp
     )
     add_executable(KungFuChessGraphics
         src/graphics_main.cpp
@@ -164,6 +167,7 @@ if(EXISTS "${OPENCV_DIR}/include")
         $<$<NOT:$<CONFIG:Debug>>:${OPENCV_DIR}/bin/opencv_world451.lib>
     )
     if(WIN32)
+        target_link_libraries(KungFuChessGraphics PRIVATE winmm)
         add_custom_command(TARGET KungFuChessGraphics POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "$<$<CONFIG:Debug>:${OPENCV_DIR}/bin/opencv_world451d.dll>"

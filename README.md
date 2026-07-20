@@ -97,6 +97,7 @@ Game art lives under `assets/`:
 
 - `assets/board.png` — board background
 - `assets/pieces/` — per-piece state sprites (`idle`, `move`, `jump`, `long_rest`, `short_rest`), `config.json`, and `board.csv`
+- `assets/sounds/` — WAV cues for select / deselect / move / jump / capture / promote / game_end / game_start (see `assets/sounds/README.txt`)
 
 These files are tracked in git. OpenCV itself (`OpenCV_451/`) is **not** committed — download it separately from the course starter.
 
@@ -130,3 +131,4 @@ OpenCV is used **only** inside `view/Img`. All other graphics code goes through 
 - ESC / Q or close the window: quit
 
 After a move, pieces take a long rest; after a jump, a short rest (visual overlays + rest animations).
+When the king is captured, graphics shows a centered **GAME OVER** overlay and plays `game_end`.

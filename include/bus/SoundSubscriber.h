@@ -4,12 +4,17 @@
 #include "bus/IGameEventListener.h"
 
 #include <ostream>
+#include <string>
 
-// Stub sound module — logs trigger names until a real audio backend exists.
+// Plays WAV cues from a sounds directory (Windows PlaySound). Also logs cues.
 class SoundSubscriber : public IGameEventListener {
+    std::string soundsDir_;
     std::ostream& out_;
+
+    void playCue(const char* cue) const;
+
 public:
-    explicit SoundSubscriber(std::ostream& out);
+    SoundSubscriber(std::string soundsDir, std::ostream& out);
     void onEvent(const GameEvent& event) override;
 };
 

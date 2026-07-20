@@ -55,7 +55,8 @@ Renderer::Renderer(Img background, std::string window_name)
 }
 
 int Renderer::showFrame(const std::vector<PlacedSprite>& sprites,
-                      const std::vector<CellOverlay>& overlays, int wait_ms) const {
+                      const std::vector<CellOverlay>& overlays, int wait_ms,
+                      const std::string& banner_text) const {
     Img frame = background_.clone();
 
     for (const CellOverlay& overlay : overlays) {
@@ -67,6 +68,13 @@ int Renderer::showFrame(const std::vector<PlacedSprite>& sprites,
             throw std::runtime_error("Renderer received an unloaded sprite.");
         }
         sprite.image->draw_on(frame, sprite.x, sprite.y);
+    }
+
+    if (!banner_text.empty()) {
+        frame.draw_filled_rect(0, 0, frame.width(), frame.height(), kBlack, 0.55);
+        const double font_size = std::max(1.2, frame.width() / 280.0);
+        const int thickness = std::max(2, frame.width() / 200);
+        frame.put_text_centered(banner_text, font_size, kWhite, thickness);
     }
 
     return frame.display(window_name_, wait_ms);

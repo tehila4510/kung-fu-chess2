@@ -12,7 +12,9 @@
 
 struct ArrivalEvent {
     Position at;
+    std::string piece;
     std::string capturedPiece;
+    bool promoted = false;
 };
 
 class RealTimeArbiter {
