@@ -13,6 +13,9 @@
 # Server third-party headers (clone separately; see README)
 /third_party/
 
+# Local SQLite user DB (created at runtime)
+/data/
+
 # CMake / compiler generated
 CMakeFiles/
 CMakeCache.txt

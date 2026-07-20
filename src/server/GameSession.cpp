@@ -94,6 +94,7 @@ void GameSession::startNewGame() {
 void GameSession::publishArrivals(const GameSnapshot& before,
                                   const GameSnapshot& after) {
     const int rows = static_cast<int>(before.cells.size());
+    char winnerColor = '?';
     for (const ArrivalEvent& arrival : engine_.lastArrivals()) {
         if (arrival.piece.size() < 2) {
             continue;
@@ -106,6 +107,10 @@ void GameSession::publishArrivals(const GameSnapshot& before,
             captured.capturedPiece = arrival.capturedPiece;
             captured.to = protocol::positionToSquare(arrival.at, rows);
             publish(captured);
+
+            if (arrival.capturedPiece.size() >= 2 && arrival.capturedPiece[1] == 'K') {
+                winnerColor = captured.color;
+            }
 
             const int points = capturePoints(arrival.capturedPiece);
             if (captured.color == 'W') {
@@ -134,6 +139,7 @@ void GameSession::publishArrivals(const GameSnapshot& before,
     if (!before.gameOver && after.gameOver) {
         GameEvent ended;
         ended.type = GameEventType::GameEnded;
+        ended.color = winnerColor;
         ended.reason = "king_captured";
         ended.whiteScore = whiteScore_;
         ended.blackScore = blackScore_;

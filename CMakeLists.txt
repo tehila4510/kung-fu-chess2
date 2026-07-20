@@ -69,10 +69,26 @@ add_test(NAME KungFuChessEngineTests COMMAND KungFuChessEngineTests)
 set(WEBSOCKETPP_DIR "${PROJECT_SOURCE_DIR}/third_party/websocketpp")
 set(ASIO_DIR "${PROJECT_SOURCE_DIR}/third_party/asio/asio/include")
 set(JSON_DIR "${PROJECT_SOURCE_DIR}/third_party/json/single_include")
+set(SQLITE_DIR "${PROJECT_SOURCE_DIR}/third_party/sqlite")
+set(BCRYPT_DIR "${PROJECT_SOURCE_DIR}/third_party/bcrypt")
 
 if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
    AND EXISTS "${ASIO_DIR}/asio.hpp"
-   AND EXISTS "${JSON_DIR}/nlohmann/json.hpp")
+   AND EXISTS "${JSON_DIR}/nlohmann/json.hpp"
+   AND EXISTS "${SQLITE_DIR}/sqlite3.c"
+   AND EXISTS "${BCRYPT_DIR}/src/bcrypt.c")
+    add_library(sqlite3_amalgamation STATIC "${SQLITE_DIR}/sqlite3.c")
+    target_include_directories(sqlite3_amalgamation PUBLIC "${SQLITE_DIR}")
+    target_compile_definitions(sqlite3_amalgamation PRIVATE SQLITE_THREADSAFE=1)
+
+    add_library(bcrypt_vendored STATIC
+        "${BCRYPT_DIR}/src/bcrypt.c"
+        "${BCRYPT_DIR}/src/crypt_blowfish.c"
+        "${BCRYPT_DIR}/src/crypt_gensalt.c"
+        "${BCRYPT_DIR}/src/wrapper.c"
+    )
+    target_include_directories(bcrypt_vendored PUBLIC "${BCRYPT_DIR}/include")
+
     add_executable(KungFuChessServer
         src/server_main.cpp
         src/server/WebSocketServer.cpp
@@ -81,6 +97,12 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         src/bus/GameEvent.cpp
         src/bus/MoveLogSubscriber.cpp
         src/bus/SoundSubscriber.cpp
+        src/bus/RatingSubscriber.cpp
+        src/auth/UserRepository.cpp
+        src/auth/UserService.cpp
+        src/auth/AuthController.cpp
+        src/auth/PasswordHasher.cpp
+        src/auth/Elo.cpp
         src/protocol/Algebraic.cpp
         src/protocol/CommandParser.cpp
         src/protocol/StateSerializer.cpp
@@ -99,6 +121,8 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         ${WEBSOCKETPP_DIR}
         ${ASIO_DIR}
         ${JSON_DIR}
+        ${SQLITE_DIR}
+        ${BCRYPT_DIR}/include
     )
     target_compile_definitions(KungFuChessServer PRIVATE
         ASIO_STANDALONE
@@ -106,8 +130,9 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         _WEBSOCKETPP_CPP11_THREAD_
         _WIN32_WINNT=0x0601
     )
+    target_link_libraries(KungFuChessServer PRIVATE sqlite3_amalgamation bcrypt_vendored)
     if(WIN32)
-        target_link_libraries(KungFuChessServer PRIVATE ws2_32 wsock32 winmm)
+        target_link_libraries(KungFuChessServer PRIVATE ws2_32 wsock32 winmm advapi32)
     endif()
 else()
     message(STATUS "Server third_party deps missing - skipping KungFuChessServer (see README)")

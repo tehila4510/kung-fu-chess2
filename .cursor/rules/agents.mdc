@@ -55,7 +55,8 @@ include/
 ├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual
 ├── view/        Img (OpenCV wrapper), Renderer
 ├── texttests/   ScriptParser (IScriptSource), ScriptRunner, ScriptCommand
-├── bus/         EventBus (Observer pub/sub), GameEvent, MoveLog/Sound/MoveHistory subscribers
+├── bus/         EventBus (Observer pub/sub), GameEvent, MoveLog/Sound/MoveHistory/Rating subscribers
+├── auth/        AuthController → UserService → UserRepository; PasswordHasher (bcrypt), Elo
 ├── protocol/    Algebraic, CommandParser, StateSerializer (nlohmann/json)
 ├── server/      GameSession, WebSocketServer
 ├── App.h        Composition root (console)
@@ -68,7 +69,10 @@ include/
 > `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:` protocol and replays it
 > against `GameEngine` + `Controller`.
 > `src/server_main.cpp` hosts the WebSocket server: protocol → `GameSession` → existing `GameEngine`,
-> publishing events on the Observer `EventBus` (no rooms/auth yet).
+> publishing events on the Observer `EventBus`. Clients must `AUTH username password` before a seat
+> is assigned; users/ratings live in SQLite via `auth/` (`AuthController` → `UserService` →
+> `UserRepository`, bcrypt hashes). `RatingSubscriber` updates ELO on `GameEnded` through `UserService`.
+> Rooms/spectators still TODO.
 > `SoundSubscriber` plays WAV cues from `assets/sounds/` (`select`, `deselect`, `move`, `jump`, `capture`,
 > `promote`, `game_end`, `game_start`). Graphics shows a centered **GAME OVER** banner when the game ends,
 > and White/Black side panels list moves (piece, from-to, game-clock time) and capture
@@ -81,7 +85,7 @@ Dependencies point inward only:
 
 ```
 main/App → input/view/io → engine → rules/realtime → model
-server_main → server/protocol/bus → engine → rules/realtime → model
+server_main → server/protocol/bus/auth → engine → rules/realtime → model
 ```
 
 | Layer | Key types | Responsibility |
@@ -92,9 +96,10 @@ server_main → server/protocol/bus → engine → rules/realtime → model
 | Engine | `GameEngine` | Orchestrates model + rules + realtime |
 | I/O | `BoardParser`, `BoardPrinter` | Parse/serialize board text |
 | Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
-| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); graphics uses `MoveHistorySubscriber` for side-panel lines + SCORE; `capturePoints()` maps captured piece → material |
-| Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls |
-| Server | `GameSession`, `WebSocketServer` | Network host; auto-tick; seats W/B |
+| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI/rating (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); graphics uses `MoveHistorySubscriber` for side-panel lines + SCORE; server uses `RatingSubscriber` for ELO; `capturePoints()` maps captured piece → material |
+| Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls; AUTH JSON helpers |
+| Auth | `AuthController`, `UserService`, `UserRepository`, `PasswordHasher`, `Elo` | AUTH wire → service → SQLite; bcrypt hashes + ELO (server only) |
+| Server | `GameSession`, `WebSocketServer` | Network host; AUTH then auto-tick; seats W/B |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — via `Img` only |
 | View | `Img`, `Renderer` | `Img` wraps OpenCV (`create`, text, blit); `Renderer` composites sprites + optional White/Black history HUD over a wider window |
 | App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Wire layers; console, graphics, and server entry points |

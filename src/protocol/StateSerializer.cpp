@@ -95,4 +95,22 @@ std::string serializeWelcomeJson(char assignedColor) {
     return root.dump();
 }
 
+std::string serializeAuthRequiredJson() {
+    nlohmann::json root = {
+        { "type", "auth_required" }
+    };
+    return root.dump();
+}
+
+std::string serializeAuthOkJson(const std::string& username, int rating,
+                                char assignedColor) {
+    nlohmann::json root = {
+        { "type", "auth_ok" },
+        { "username", username },
+        { "rating", rating },
+        { "color", std::string(1, assignedColor) }
+    };
+    return root.dump();
+}
+
 }  // namespace protocol

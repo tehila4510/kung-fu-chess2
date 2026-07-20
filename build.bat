@@ -38,11 +38,45 @@ if /i "%~1"=="server" (
         echo Run the clone commands from README.md "Server dependencies" section.
         exit /b 1
     )
+    if not exist third_party\sqlite\sqlite3.c (
+        echo ERROR: third_party\sqlite amalgamation not found.
+        echo Run the download commands from README.md "Server dependencies" section.
+        exit /b 1
+    )
+    if not exist third_party\bcrypt\src\bcrypt.c (
+        echo ERROR: third_party\bcrypt not found.
+        echo Run the clone/copy commands from README.md "Server dependencies" section.
+        exit /b 1
+    )
 
-    set SERVER_SOURCES=src\server_main.cpp src\server\WebSocketServer.cpp src\server\GameSession.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\MoveLogSubscriber.cpp src\bus\SoundSubscriber.cpp src\protocol\Algebraic.cpp src\protocol\CommandParser.cpp src\protocol\StateSerializer.cpp src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp
-    set SERVER_FLAGS=-std=c++17 -Iinclude -Ithird_party\websocketpp -Ithird_party\asio\asio\include -Ithird_party\json\single_include -DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_ -D_WEBSOCKETPP_CPP11_THREAD_ -D_WIN32_WINNT=0x0601 -Wall -Wextra -Wpedantic
+    set GCC=%GPP:g++.exe=gcc.exe%
+    if not exist "!GCC!" (
+        where gcc >nul 2>&1
+        if errorlevel 1 (
+            echo gcc not found. Needed to compile sqlite3.c / bcrypt C sources.
+            exit /b 1
+        )
+        set GCC=gcc
+    )
+
+    echo Compiling sqlite3...
+    "!GCC!" -c third_party\sqlite\sqlite3.c -o build\sqlite3.o -O2 -DSQLITE_THREADSAFE=1
+    if errorlevel 1 exit /b 1
+
+    echo Compiling bcrypt...
+    "!GCC!" -c third_party\bcrypt\src\bcrypt.c -o build\bcrypt.o -O2 -Ithird_party\bcrypt\include
+    if errorlevel 1 exit /b 1
+    "!GCC!" -c third_party\bcrypt\src\crypt_blowfish.c -o build\crypt_blowfish.o -O2 -Ithird_party\bcrypt\include
+    if errorlevel 1 exit /b 1
+    "!GCC!" -c third_party\bcrypt\src\crypt_gensalt.c -o build\crypt_gensalt.o -O2 -Ithird_party\bcrypt\include
+    if errorlevel 1 exit /b 1
+    "!GCC!" -c third_party\bcrypt\src\wrapper.c -o build\bcrypt_wrapper.o -O2 -Ithird_party\bcrypt\include
+    if errorlevel 1 exit /b 1
+
+    set SERVER_SOURCES=src\server_main.cpp src\server\WebSocketServer.cpp src\server\GameSession.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\MoveLogSubscriber.cpp src\bus\SoundSubscriber.cpp src\bus\RatingSubscriber.cpp src\auth\UserRepository.cpp src\auth\UserService.cpp src\auth\AuthController.cpp src\auth\PasswordHasher.cpp src\auth\Elo.cpp src\protocol\Algebraic.cpp src\protocol\CommandParser.cpp src\protocol\StateSerializer.cpp src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp
+    set SERVER_FLAGS=-std=c++17 -Iinclude -Ithird_party\websocketpp -Ithird_party\asio\asio\include -Ithird_party\json\single_include -Ithird_party\sqlite -Ithird_party\bcrypt\include -DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_ -D_WEBSOCKETPP_CPP11_THREAD_ -D_WIN32_WINNT=0x0601 -Wall -Wextra -Wpedantic
     rem Use !var! — %%var%% is empty inside this if-block (EnableDelayedExpansion).
-    "%GPP%" !SERVER_FLAGS! !SERVER_SOURCES! -o build\KungFuChessServer.exe -lws2_32 -lwsock32 -lwinmm
+    "%GPP%" !SERVER_FLAGS! !SERVER_SOURCES! build\sqlite3.o build\bcrypt.o build\crypt_blowfish.o build\crypt_gensalt.o build\bcrypt_wrapper.o -o build\KungFuChessServer.exe -lws2_32 -lwsock32 -lwinmm -ladvapi32
     if errorlevel 1 exit /b 1
     echo Built: build\KungFuChessServer.exe
     echo Listening on ws://localhost:9002 — press Ctrl+C to stop.

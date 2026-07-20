@@ -18,9 +18,10 @@ alwaysApply: true
 | Graphics | `graphics/` | `Animation`, `AnimationCache` (`AnimationSpec`), `AnimationLoader`, `BoardLayout`, `PieceVisual` — load/scale sprite frames, play named state animations, read asset board layout; depends on `Img` only |
 | View | `view/` | `Img` (OpenCV wrapper) + `Renderer` — composites sprites, optional White/Black history HUD, drives the window; never mutates `Board` |
 | Text tests | `texttests/` | `ScriptParser`, `ScriptRunner` — scripted stdin integration |
-| Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI events (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); `MoveHistorySubscriber` stores graphics side-panel lines + SCORE; `capturePoints()` for material; logic does not know subscribers |
-| Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in; JSON state/events out |
-| Server | `server/` | `GameSession` + `WebSocketServer` — network host, auto-tick, W/B seats |
+| Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI/rating events (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); `MoveHistorySubscriber` stores graphics side-panel lines + SCORE; `RatingSubscriber` updates ELO on `GameEnded`; `capturePoints()` for material; logic does not know subscribers |
+| Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in (`AUTH`, moves); JSON state/events out |
+| Auth | `auth/` | `AuthController` → `UserService` → `UserRepository` (SQLite); `PasswordHasher` (bcrypt), `Elo` — server-only |
+| Server | `server/` | `GameSession` + `WebSocketServer` — AUTH then network host, auto-tick, W/B seats |
 | App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Composition roots: console, graphics, WebSocket server |
 
 ## Dependency rule
@@ -29,7 +30,7 @@ Dependencies point **inward only**. Outer layers may use inner; inner layers mus
 
 ```
 main/App → input/view/io → engine → rules/realtime → model
-server_main → server/protocol/bus → engine → rules/realtime → model
+server_main → server/protocol/bus/auth → engine → rules/realtime → model
 ```
 
 The graphics stack sits on the view side and depends inward on `view/Img` only:
@@ -43,7 +44,7 @@ GraphicsApplication → graphics/ → view(Img)
 
 `graphics/` and `Renderer` must never `#include <opencv2/...>`; all pixel work goes through the `Img` API.
 
-Server reuses the same `GameEngine` (no forked logic). `GameSession` publishes Bus events after engine calls; the network layer never embeds rules.
+Server reuses the same `GameEngine` (no forked logic). `GameSession` publishes Bus events after engine calls; the network layer never embeds rules. `WebSocketServer` requires `AUTH` (via `AuthController` → `UserService`) before seating; `RatingSubscriber` listens for `GameEnded` and updates ratings via `UserService`.
 
 ## Design patterns
 

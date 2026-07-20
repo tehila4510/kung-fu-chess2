@@ -5,11 +5,16 @@
 #include <chrono>
 #include <iostream>
 
-WebSocketServer::WebSocketServer()
-    : moveLog_(std::cout),
-      sound_("assets/sounds", std::cout) {
+WebSocketServer::WebSocketServer(const std::string& dbPath)
+    : usersRepo_(dbPath),
+      users_(usersRepo_),
+      auth_(users_),
+      moveLog_(std::cout),
+      sound_("assets/sounds", std::cout),
+      rating_(users_) {
     session_.bus().subscribe(&moveLog_);
     session_.bus().subscribe(&sound_);
+    session_.bus().subscribe(&rating_);
 
     server_.init_asio();
     server_.set_reuse_addr(true);
@@ -28,10 +33,19 @@ WebSocketServer::~WebSocketServer() {
     running_ = false;
     session_.bus().unsubscribe(&moveLog_);
     session_.bus().unsubscribe(&sound_);
+    session_.bus().unsubscribe(&rating_);
 }
 
 int WebSocketServer::seatedCount() const {
     return static_cast<int>(seats_.size());
+}
+
+int WebSocketServer::connectedCount() const {
+    return static_cast<int>(pending_.size() + seats_.size());
+}
+
+bool WebSocketServer::isPending(ConnectionHdl hdl) const {
+    return pending_.find(hdl) != pending_.end();
 }
 
 char WebSocketServer::seatFor(ConnectionHdl hdl) const {
@@ -61,7 +75,7 @@ void WebSocketServer::broadcastJson(const std::string& payload) {
 void WebSocketServer::onOpen(ConnectionHdl hdl) {
     // TODO: spectator support will be added later alongside Room/Join.
     // For now reject any 3rd+ client (no read, no write).
-    if (seatedCount() >= 2) {
+    if (connectedCount() >= 2) {
         sendJson(hdl, protocol::serializeErrorJson("server_full"));
         websocketpp::lib::error_code ec;
         server_.close(hdl, websocketpp::close::status::try_again_later, "server_full",
@@ -69,37 +83,77 @@ void WebSocketServer::onOpen(ConnectionHdl hdl) {
         return;
     }
 
+    pending_.insert(hdl);
+    sendJson(hdl, protocol::serializeAuthRequiredJson());
+    std::cout << "Client connected — AUTH required (" << connectedCount() << "/2)\n";
+}
+
+void WebSocketServer::onClose(ConnectionHdl hdl) {
+    const char color = seatFor(hdl);
+    pending_.erase(hdl);
+    seats_.erase(hdl);
+    usernames_.erase(hdl);
+    if (color != '?') {
+        rating_.clearSeat(color);
+        std::cout << "Player " << color << " disconnected (" << seatedCount()
+                  << "/2 seated)\n";
+    }
+}
+
+void WebSocketServer::seatAfterAuth(ConnectionHdl hdl, const std::string& username,
+                                    int rating) {
+    pending_.erase(hdl);
     const char color = (seatedCount() == 0) ? 'W' : 'B';
     seats_[hdl] = color;
+    usernames_[hdl] = username;
+    rating_.setSeat(color, username);
+
+    sendJson(hdl, protocol::serializeAuthOkJson(username, rating, color));
     sendJson(hdl, protocol::serializeWelcomeJson(color));
 
     const auto events = session_.drainEvents();
     sendJson(hdl, protocol::serializeGameStateJson(session_.engine(), events, "ok",
                                                    "welcome"));
 
-    std::cout << "Player seated as " << color << " (" << seatedCount() << "/2)\n";
+    std::cout << "Player " << username << " seated as " << color << " (rating "
+              << rating << ", " << seatedCount() << "/2)\n";
     if (seatedCount() == 2) {
         std::cout << "Both players connected — game live on port " << kPort << '\n';
     }
 }
 
-void WebSocketServer::onClose(ConnectionHdl hdl) {
-    const char color = seatFor(hdl);
-    seats_.erase(hdl);
-    if (color != '?') {
-        std::cout << "Player " << color << " disconnected (" << seatedCount()
-                  << "/2)\n";
+void WebSocketServer::handleAuth(ConnectionHdl hdl, const std::string& line) {
+    try {
+        const AuthCommandResult auth = auth_.handle(line);
+        if (!auth.ok) {
+            sendJson(hdl, protocol::serializeErrorJson(auth.reason));
+            return;
+        }
+        if (seatedCount() >= 2) {
+            sendJson(hdl, protocol::serializeErrorJson("server_full"));
+            return;
+        }
+        seatAfterAuth(hdl, auth.username, auth.rating);
+    } catch (const std::exception& ex) {
+        std::cerr << "AUTH failed: " << ex.what() << '\n';
+        sendJson(hdl, protocol::serializeErrorJson("runtime_error"));
     }
 }
 
 void WebSocketServer::onMessage(ConnectionHdl hdl, WsServer::message_ptr msg) {
+    const std::string line = msg->get_payload();
+
+    if (isPending(hdl)) {
+        handleAuth(hdl, line);
+        return;
+    }
+
     const char color = seatFor(hdl);
     if (color == '?') {
         sendJson(hdl, protocol::serializeErrorJson("not_seated"));
         return;
     }
 
-    const std::string line = msg->get_payload();
     const SessionResult result = session_.handleCommand(color, line);
     const std::string status = result.accepted ? "ok" : "rejected";
     broadcastJson(protocol::serializeGameStateJson(session_.engine(), result.events,
@@ -144,7 +198,8 @@ int WebSocketServer::run() {
 
         std::cout << "Kung Fu Chess WebSocket server listening on port " << kPort
                   << '\n';
-        std::cout << "Waiting for White and Black clients...\n";
+        std::cout << "Waiting for AUTH then White/Black seats...\n";
+        std::cout << "Auth: AUTH <username> <password>\n";
         std::cout << "Commands: WMe2e4 | WJe2 | WAIT 100 | STATE\n";
 
         server_.run();

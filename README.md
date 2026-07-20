@@ -32,24 +32,54 @@ Errors are printed to stdout (e.g. `ERROR UNKNOWN_TOKEN`, `ERROR ROW_WIDTH_MISMA
 
 ## Server dependencies
 
-Header-only libs under `third_party/` (not committed). Clone once from the project root:
+Libs under `third_party/` (not committed). Clone / download once from the project root:
 
 ```powershell
 mkdir third_party -Force
 git clone --depth 1 https://github.com/zaphoyd/websocketpp.git third_party/websocketpp
 git clone --depth 1 --branch asio-1-28-0 https://github.com/chriskohlhoff/asio.git third_party/asio
 git clone --depth 1 https://github.com/nlohmann/json.git third_party/json
+
+# SQLite amalgamation (official C source — single .c/.h, no external deps)
+Invoke-WebRequest -Uri "https://www.sqlite.org/2024/sqlite-amalgamation-3460100.zip" -OutFile sqlite-amalgamation.zip
+Expand-Archive sqlite-amalgamation.zip -DestinationPath third_party/_sqlite_extract -Force
+New-Item -ItemType Directory -Force -Path third_party/sqlite | Out-Null
+Copy-Item third_party/_sqlite_extract/sqlite-amalgamation-3460100/sqlite3.c third_party/sqlite/
+Copy-Item third_party/_sqlite_extract/sqlite-amalgamation-3460100/sqlite3.h third_party/sqlite/
+Remove-Item -Recurse -Force third_party/_sqlite_extract, sqlite-amalgamation.zip
+
+# Portable bcrypt (Openwall crypt_blowfish + wrapper; https://github.com/trusch/libbcrypt)
+git clone --depth 1 https://github.com/trusch/libbcrypt.git third_party/_libbcrypt
+New-Item -ItemType Directory -Force -Path third_party/bcrypt/include/bcrypt, third_party/bcrypt/src | Out-Null
+Copy-Item third_party/_libbcrypt/LICENSE third_party/bcrypt/
+Copy-Item third_party/_libbcrypt/include/bcrypt/bcrypt.h,
+         third_party/_libbcrypt/include/bcrypt/crypt.h,
+         third_party/_libbcrypt/include/bcrypt/crypt_blowfish.h,
+         third_party/_libbcrypt/include/bcrypt/crypt_gensalt.h,
+         third_party/_libbcrypt/include/bcrypt/ow-crypt.h third_party/bcrypt/include/bcrypt/
+Copy-Item third_party/_libbcrypt/src/bcrypt.c,
+         third_party/_libbcrypt/src/crypt_blowfish.c,
+         third_party/_libbcrypt/src/crypt_gensalt.c,
+         third_party/_libbcrypt/src/wrapper.c third_party/bcrypt/src/
+# MinGW/Windows: declare crypt_rn / crypt_gensalt_rn (upstream only includes ow-crypt.h on non-Windows)
+(Get-Content third_party/bcrypt/src/bcrypt.c -Raw) -replace `
+  '(#include "../include/bcrypt/bcrypt.h"\r?\n)\r?\n#include <windows.h>', `
+  "`$1#include `"../include/bcrypt/ow-crypt.h`"`n`n#include <windows.h>" |
+  Set-Content third_party/bcrypt/src/bcrypt.c -NoNewline
+Remove-Item -Recurse -Force third_party/_libbcrypt
 ```
 
 > Pin **Asio 1.28.0** (`asio-1-28-0`). Newer Asio removed APIs that websocketpp still calls (`expires_from_now`). No Boost required.
 
-Expected include roots used by the build:
+Expected include / source roots used by the build:
 
-| Dependency | Include path |
-|------------|----------------|
+| Dependency | Path |
+|------------|------|
 | websocketpp | `third_party/websocketpp` |
 | Asio standalone 1.28 (no Boost) | `third_party/asio/asio/include` |
 | nlohmann/json | `third_party/json/single_include` |
+| SQLite amalgamation | `third_party/sqlite/sqlite3.c` + `sqlite3.h` |
+| bcrypt (vendored C) | `third_party/bcrypt/src/*.c` + `include/bcrypt/` |
 
 Then:
 
@@ -57,12 +87,12 @@ Then:
 .\build.bat server
 ```
 
-Listens on **port 9002**. First client = White, second = Black; further connections are rejected (spectator/Room support TODO later).
+Listens on **port 9002**. Flow: connect → `AUTH <username> <password>` (register-or-login, bcrypt + SQLite) → seat White then Black → play. Further connections are rejected (spectator/Room support TODO later). Users and ratings live in `data/users.db` (rating starts at 1200; ELO K=32 on `GameEnded`).
 
 **Wire protocol (hybrid):**
 
-- Client → server (plain text): `WMe2e4`, `BJe7`, `WAIT 100`, `STATE`
-- Server → client (JSON): board snapshot, motions, rests, Bus event payloads
+- Client → server (plain text): `AUTH user pass`, then `WMe2e4`, `BJe7`, `WAIT 100`, `STATE`
+- Server → client (JSON): `auth_required` / `auth_ok`, board snapshot, motions, rests, Bus event payloads
 
 ## Project structure
 
@@ -85,7 +115,7 @@ include/
 
 src/             mirrors include/ + main.cpp + graphics_main.cpp + server_main.cpp
 assets/          board.png (background), piece sprites, configs, board.csv
-third_party/     websocketpp, asio, nlohmann/json (cloned locally)
+third_party/     websocketpp, asio, nlohmann/json, sqlite, bcrypt (cloned/downloaded locally)
 tests/           unit tests
 build.bat        primary Windows build script
 CMakeLists.txt   optional CMake build

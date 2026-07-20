@@ -18,6 +18,11 @@ std::string serializeErrorJson(const std::string& reason);
 
 std::string serializeWelcomeJson(char assignedColor);
 
+std::string serializeAuthRequiredJson();
+
+std::string serializeAuthOkJson(const std::string& username, int rating,
+                                char assignedColor);
+
 }  // namespace protocol
 
 #endif
