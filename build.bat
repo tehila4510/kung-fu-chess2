@@ -22,6 +22,35 @@ set ENGINE_TEST_SOURCES=tests\test_main.cpp tests\RuleEngineTest.cpp tests\RealT
 set GRAPHICS_STL_SOURCES=src\graphics\AssetPaths.cpp src\graphics\BoardLayout.cpp src\graphics\FileBoardSource.cpp src\graphics\BoardLayoutLoader.cpp src\graphics\FileConfigSource.cpp src\graphics\GraphicsConfigLoader.cpp
 set "VSWHERE=%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe"
 
+if /i "%~1"=="server" (
+    if not exist third_party\websocketpp\websocketpp\server.hpp (
+        echo ERROR: third_party\websocketpp not found.
+        echo Run the clone commands from README.md "Server dependencies" section.
+        exit /b 1
+    )
+    if not exist third_party\asio\asio\include\asio.hpp (
+        echo ERROR: third_party\asio not found ^(need tag asio-1-28-0 layout^).
+        echo Run the clone commands from README.md "Server dependencies" section.
+        exit /b 1
+    )
+    if not exist third_party\json\single_include\nlohmann\json.hpp (
+        echo ERROR: third_party\json not found.
+        echo Run the clone commands from README.md "Server dependencies" section.
+        exit /b 1
+    )
+
+    set SERVER_SOURCES=src\server_main.cpp src\server\WebSocketServer.cpp src\server\GameSession.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\MoveLogSubscriber.cpp src\bus\SoundSubscriber.cpp src\protocol\Algebraic.cpp src\protocol\CommandParser.cpp src\protocol\StateSerializer.cpp src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\io\BoardParser.cpp
+    set SERVER_FLAGS=-std=c++17 -Iinclude -Ithird_party\websocketpp -Ithird_party\asio\asio\include -Ithird_party\json\single_include -DASIO_STANDALONE -D_WEBSOCKETPP_CPP11_STL_ -D_WEBSOCKETPP_CPP11_THREAD_ -D_WIN32_WINNT=0x0601 -Wall -Wextra -Wpedantic
+    rem Use !var! — %%var%% is empty inside this if-block (EnableDelayedExpansion).
+    "%GPP%" !SERVER_FLAGS! !SERVER_SOURCES! -o build\KungFuChessServer.exe -lws2_32 -lwsock32
+    if errorlevel 1 exit /b 1
+    echo Built: build\KungFuChessServer.exe
+    echo Listening on ws://localhost:9002 — press Ctrl+C to stop.
+    echo.
+    build\KungFuChessServer.exe
+    exit /b %errorlevel%
+)
+
 if /i "%~1"=="test" (
     "%GPP%" %COMMON_FLAGS% %ENGINE_TEST_SOURCES% %GRAPHICS_STL_SOURCES% -o build\KungFuChessEngineTests.exe
     if errorlevel 1 exit /b 1

@@ -18,14 +18,18 @@ alwaysApply: true
 | Graphics | `graphics/` | `Animation`, `AnimationCache` (`AnimationSpec`), `AnimationLoader`, `BoardLayout`, `PieceVisual` — load/scale sprite frames, play named state animations, read asset board layout; depends on `Img` only |
 | View | `view/` | `Img` (OpenCV wrapper) + `Renderer` — `Renderer` composites `PlacedSprite`s over the board background and drives the window; never mutates `Board` |
 | Text tests | `texttests/` | `ScriptParser`, `ScriptRunner` — scripted stdin integration |
-| App | `App`, `GraphicsApplication`, `main`, `graphics_main` | Composition roots: console wires ScriptRunner; graphics wires engine/input/view loop |
+| Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI events; logic does not know subscribers |
+| Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in; JSON state/events out |
+| Server | `server/` | `GameSession` + `WebSocketServer` — network host, auto-tick, W/B seats |
+| App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Composition roots: console, graphics, WebSocket server |
 
 ## Dependency rule
 
-Dependencies point **inward only**. Outer layers may use inner; inner layers must never include `view/`, `input/`, `io/`, or `main`.
+Dependencies point **inward only**. Outer layers may use inner; inner layers must never include `view/`, `input/`, `io/`, `server/`, or `main`.
 
 ```
 main/App → input/view/io → engine → rules/realtime → model
+server_main → server/protocol/bus → engine → rules/realtime → model
 ```
 
 The graphics stack sits on the view side and depends inward on `view/Img` only:
@@ -37,11 +41,14 @@ GraphicsApplication → graphics/ → view(Img)
 
 `graphics/` and `Renderer` must never `#include <opencv2/...>`; all pixel work goes through the `Img` API.
 
+Server reuses the same `GameEngine` (no forked logic). `GameSession` publishes Bus events after engine calls; the network layer never embeds rules.
+
 ## Design patterns
 
 - **Strategy**: one `IPieceRules` per piece type; `RuleEngine` maps piece kind → strategy via `unordered_map<char, unique_ptr<IPieceRules>>`
 - **DTO**: cross-boundary structs (`MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`, `MotionView`, `RestView`) — plain data, no behavior
-- **Facade**: `GameEngine` is the single entry point for game logic from input/I/O layers
+- **Facade**: `GameEngine` is the single entry point for game logic; `GameSession` is the server-side facade over it
+- **Observer**: `EventBus` for MoveMade / PieceCaptured / GameEnded / ScoreUpdated / …
 - **Snapshot**: view reads `GameSnapshot`; never mutates `Board` directly
 
 ## Adding features

@@ -34,7 +34,7 @@ alwaysApply: true
 
 - C++17, STL only for the engine, console app, and tests — no third-party deps there
 - Headers in `include/`, sources in `src/`
-- Build: `.\build.bat` builds and runs the app (`src\main.cpp` composition root); `.\build.bat test` builds and runs the engine test suite (includes STL graphics tests for board CSV / config / asset paths); `.\build.bat graphics-test` builds and runs OpenCV graphics unit tests
+- Build: `.\build.bat` builds and runs the app (`src\main.cpp` composition root); `.\build.bat test` builds and runs the engine test suite (includes STL graphics tests for board CSV / config / asset paths); `.\build.bat graphics-test` builds and runs OpenCV graphics unit tests; `.\build.bat server` builds the WebSocket server (requires `third_party/` deps — see README)
 - **Graphics only:** use the Qama Tech `Img` wrapper (`include/view/Img.h`, `src/view/Img.cpp`) from the course repo; OpenCV is allowed **only** inside that `Img` class (bundled `OpenCV_451` for `build.bat graphics` / `graphics-test`). No other graphics or rendering libraries (SDL, SFML, GLFW, etc.). Never `#include <opencv2/...>` outside `Img.h` / `Img.cpp` — all other graphics code (`graphics/`, `Renderer`, `GraphicsApplication`, `graphics_main`) goes through the `Img` API. `build.bat graphics` builds `src/graphics_main.cpp` (thin entry) + `GraphicsApplication` (frame loop, click-to-move, `PieceVisual` state animations for idle/move/jump/rest).
 
 ## Language
@@ -55,6 +55,9 @@ include/
 ├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual
 ├── view/        Img (OpenCV wrapper), Renderer
 ├── texttests/   ScriptParser (IScriptSource), ScriptRunner, ScriptCommand
+├── bus/         EventBus (Observer pub/sub), GameEvent, MoveLog/Sound subscribers
+├── protocol/    Algebraic, CommandParser, StateSerializer (nlohmann/json)
+├── server/      GameSession, WebSocketServer
 ├── App.h        Composition root (console)
 └── GraphicsApplication.h  Interactive graphics composition root (frame loop)
 ```
@@ -64,6 +67,8 @@ include/
 > and `BoardPrinter` (an `IBoardPrinter`), injects them into `ScriptRunner` by const reference, then calls
 > `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:` protocol and replays it
 > against `GameEngine` + `Controller`.
+> `src/server_main.cpp` hosts the WebSocket server: protocol → `GameSession` → existing `GameEngine`,
+> publishing events on the Observer `EventBus` (no rooms/auth yet).
 
 ## Architecture
 
@@ -71,6 +76,7 @@ Dependencies point inward only:
 
 ```
 main/App → input/view/io → engine → rules/realtime → model
+server_main → server/protocol/bus → engine → rules/realtime → model
 ```
 
 | Layer | Key types | Responsibility |
@@ -81,15 +87,19 @@ main/App → input/view/io → engine → rules/realtime → model
 | Engine | `GameEngine` | Orchestrates model + rules + realtime |
 | I/O | `BoardParser`, `BoardPrinter` | Parse/serialize board text |
 | Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
+| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI |
+| Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls |
+| Server | `GameSession`, `WebSocketServer` | Network host; auto-tick; seats W/B |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — via `Img` only |
 | View | `Img`, `Renderer` | `Img` wraps OpenCV; `Renderer` composites sprites over the board + drives the window |
-| App | `App`, `GraphicsApplication`, `main`, `graphics_main` | Wire layers; console and graphics entry points |
+| App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Wire layers; console, graphics, and server entry points |
 
 ### Patterns
 
 - **Strategy**: `IPieceRules` per piece; `RuleEngine` maps kind → strategy (`unordered_map<char, unique_ptr<IPieceRules>>`)
 - **DTO**: `MoveResult`, `MoveValidation`, `GameSnapshot`, `ArrivalEvent`, `MotionView`, `RestView`
-- **Facade**: `GameEngine` is the single game-logic entry point
+- **Facade**: `GameEngine` is the single game-logic entry point; `GameSession` wraps it for bus + network
+- **Observer**: `EventBus` — game session publishes; subscribers react independently
 - **Snapshot**: view never mutates `Board` directly
 
 ## Input format (do not change without explicit request)

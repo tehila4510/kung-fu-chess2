@@ -65,6 +65,54 @@ add_executable(KungFuChessEngineTests
 enable_testing()
 add_test(NAME KungFuChessEngineTests COMMAND KungFuChessEngineTests)
 
+# --- WebSocket server (optional third_party deps) -----------------------------
+set(WEBSOCKETPP_DIR "${PROJECT_SOURCE_DIR}/third_party/websocketpp")
+set(ASIO_DIR "${PROJECT_SOURCE_DIR}/third_party/asio/asio/include")
+set(JSON_DIR "${PROJECT_SOURCE_DIR}/third_party/json/single_include")
+
+if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
+   AND EXISTS "${ASIO_DIR}/asio.hpp"
+   AND EXISTS "${JSON_DIR}/nlohmann/json.hpp")
+    add_executable(KungFuChessServer
+        src/server_main.cpp
+        src/server/WebSocketServer.cpp
+        src/server/GameSession.cpp
+        src/bus/EventBus.cpp
+        src/bus/GameEvent.cpp
+        src/bus/MoveLogSubscriber.cpp
+        src/bus/SoundSubscriber.cpp
+        src/protocol/Algebraic.cpp
+        src/protocol/CommandParser.cpp
+        src/protocol/StateSerializer.cpp
+        src/model/Cell.cpp
+        src/model/Board.cpp
+        src/model/GameState.cpp
+        src/model/Piece.cpp
+        src/model/Position.cpp
+        src/rules/PieceRules.cpp
+        src/rules/RuleEngine.cpp
+        src/realtime/RealTimeArbiter.cpp
+        src/engine/GameEngine.cpp
+        src/io/BoardParser.cpp
+    )
+    target_include_directories(KungFuChessServer PRIVATE
+        ${WEBSOCKETPP_DIR}
+        ${ASIO_DIR}
+        ${JSON_DIR}
+    )
+    target_compile_definitions(KungFuChessServer PRIVATE
+        ASIO_STANDALONE
+        _WEBSOCKETPP_CPP11_STL_
+        _WEBSOCKETPP_CPP11_THREAD_
+        _WIN32_WINNT=0x0601
+    )
+    if(WIN32)
+        target_link_libraries(KungFuChessServer PRIVATE ws2_32 wsock32)
+    endif()
+else()
+    message(STATUS "Server third_party deps missing - skipping KungFuChessServer (see README)")
+endif()
+
 # --- Graphics target (OpenCV) -------------------------------------------------
 # This is the ONLY target that depends on OpenCV. It must be built with MSVC,
 # because the bundled OpenCV_451 (opencv_world451.lib/.dll) is an MSVC build and

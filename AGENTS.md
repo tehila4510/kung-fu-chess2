@@ -18,10 +18,14 @@ include/
 ├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual
 ├── view/        Img (OpenCV wrapper), Renderer
 ├── texttests/   ScriptParser (IScriptSource), ScriptRunner, ScriptCommand
+├── bus/         EventBus (Observer), GameEvent, MoveLog/Sound subscribers
+├── protocol/    Algebraic, CommandParser, StateSerializer
+├── server/      GameSession, WebSocketServer
 ├── App.h        Composition root (console)
 └── GraphicsApplication.h  Interactive graphics composition root (frame loop)
 
-src/             mirrors include/ paths + main.cpp + graphics_main.cpp + GraphicsApplication.cpp
+src/             mirrors include/ paths + main.cpp + graphics_main.cpp + GraphicsApplication.cpp + server_main.cpp
+third_party/     websocketpp + standalone Asio + nlohmann/json (cloned locally; see README)
 build.bat        primary Windows build script
 CMakeLists.txt   optional CMake build
 .cursor/rules/   Cursor MDC rules (agents.mdc = entry point)
@@ -32,6 +36,7 @@ CMakeLists.txt   optional CMake build
 > (an `IScriptSource`) and `BoardPrinter` (an `IBoardPrinter`), injects them into `ScriptRunner` by const
 > reference, then calls `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:`
 > protocol and replays it against the `model/rules/realtime/engine/input/io` layers.
+> `src/server_main.cpp` hosts the WebSocket server (`GameSession` + `EventBus` over existing `GameEngine`).
 
 ## Build & verify
 
@@ -40,6 +45,7 @@ CMakeLists.txt   optional CMake build
 .\build.bat test   # build and run the engine test suite (includes STL graphics tests)
 .\build.bat graphics  # animated board window (OpenCV via Img only; requires MSVC + OpenCV_451)
 .\build.bat graphics-test  # OpenCV graphics unit tests (Animation/Cache/PieceVisual/Img/Renderer)
+.\build.bat server # WebSocket server on :9002 (clone third_party deps first — see README)
 ```
 
 `build.bat graphics` builds `src/graphics_main.cpp` — a thin entry point that loads
@@ -68,6 +74,7 @@ Dependencies point inward only:
 
 ```
 main/App → input/view/io → engine → rules/realtime → model
+server_main → server/protocol/bus → engine → rules/realtime → model
 ```
 
 | Layer | Key types | Responsibility |
@@ -78,10 +85,13 @@ main/App → input/view/io → engine → rules/realtime → model
 | Engine | `GameEngine` | Orchestrates model + rules + realtime; exposes `MoveResult`, `GameSnapshot` |
 | I/O | `BoardParser`, `BoardPrinter` | Parse and serialize board text |
 | Input | `Controller`, `BoardMapper` | Map clicks/pixels to engine calls |
+| Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI |
+| Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls |
+| Server | `GameSession`, `WebSocketServer` | Network host; auto-tick; W/B seats (no rooms/auth yet) |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — depends on `Img` only |
 | View | `Img`, `Renderer` | `Img` wraps OpenCV; `Renderer` composites sprites over the board and drives the window — never mutate `Board` |
 | Text tests | `ScriptParser`, `ScriptRunner` | Scripted stdin integration |
-| App | `App`, `GraphicsApplication`, `main`, `graphics_main` | Wire layers; console and graphics entry points |
+| App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Wire layers; console, graphics, and server entry points |
 
 ### Cross-boundary DTOs
 

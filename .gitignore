@@ -10,6 +10,9 @@
 # Bundled OpenCV (download separately; do not commit)
 /OpenCV_451/
 
+# Server third-party headers (clone separately; see README)
+/third_party/
+
 # CMake / compiler generated
 CMakeFiles/
 CMakeCache.txt
