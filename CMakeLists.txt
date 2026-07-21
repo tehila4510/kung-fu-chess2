@@ -105,6 +105,7 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         src/server/WebSocketServer.cpp
         src/server/ConnectionRegistry.cpp
         src/server/MatchCoordinator.cpp
+        src/server/RoomManager.cpp
         src/server/MatchQueue.cpp
         src/server/MatchRoom.cpp
         src/server/GameSession.cpp

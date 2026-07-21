@@ -65,6 +65,10 @@ int ConnectionRegistry::seatedCount() const {
     return count;
 }
 
+std::size_t ConnectionRegistry::size() const {
+    return clients_.size();
+}
+
 void ConnectionRegistry::setAuthenticated(ConnectionHdl hdl,
                                           const std::string& username,
                                           int rating) {

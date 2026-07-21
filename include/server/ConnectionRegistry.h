@@ -15,6 +15,7 @@
 
 #include <websocketpp/common/connection_hdl.hpp>
 
+#include <cstddef>
 #include <map>
 #include <optional>
 #include <string>
@@ -55,6 +56,7 @@ public:
     std::optional<ConnectionHdl> hdlForPlayer(MatchQueue::PlayerId id) const;
     bool usernameAlreadyConnected(const std::string& username) const;
     int seatedCount() const;
+    std::size_t size() const;
 
     void setAuthenticated(ConnectionHdl hdl, const std::string& username, int rating);
     void setViewer(ConnectionHdl hdl, const std::string& username, int rating);

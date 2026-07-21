@@ -21,7 +21,7 @@ include/
 ├── bus/         EventBus (Observer), GameEvent, MoveLog/Sound/MoveHistory/Rating subscribers
 ├── auth/        AuthController → UserService → UserRepository; PasswordHasher (bcrypt), Elo
 ├── protocol/    Algebraic, CommandParser, StateSerializer
-├── server/      GameSession, MatchRoom, MatchQueue, WebSocketServer
+├── server/      GameSession, MatchRoom, MatchQueue, ConnectionRegistry, MatchCoordinator, RoomManager, WebSocketServer
 ├── App.h        Composition root (console)
 └── GraphicsApplication.h  Interactive graphics composition root (frame loop)
 
@@ -37,7 +37,7 @@ CMakeLists.txt   optional CMake build
 > (an `IScriptSource`) and `BoardPrinter` (an `IBoardPrinter`), injects them into `ScriptRunner` by const
 > reference, then calls `ScriptRunner::run(std::cin, std::cout)`, which parses the `Board:`/`Commands:`
 > protocol and replays it against the `model/rules/realtime/engine/input/io` layers.
-> `src/server_main.cpp` hosts the WebSocket server (`MatchQueue` → `MatchRoom` → `GameSession` + `EventBus` over existing `GameEngine`).
+> `src/server_main.cpp` hosts the WebSocket server (`ConnectionRegistry` + `MatchCoordinator`/`MatchQueue` → `RoomManager`/`MatchRoom` → `GameSession` + `EventBus` over existing `GameEngine`).
 > Clients `AUTH username password`, then `PLAY` to enter ELO±100 matchmaking (60s timeout → `match_not_found`).
 > A match creates a `MatchRoom` with seats W/B (earlier waiter = White). Multiple concurrent matches are supported.
 > `Viewer` state exists for non-play connections (full spectator/Rooms broadcast still TODO).
@@ -96,7 +96,7 @@ server_main → server/protocol/bus/auth → engine → rules/realtime → model
 | Bus | `EventBus`, `GameEvent`, subscribers | Observer pub/sub for score/log/sound/UI/rating (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); graphics uses `MoveHistorySubscriber` for side-panel lines + SCORE; server uses `RatingSubscriber` for ELO; `capturePoints()` maps captured piece → material |
 | Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls; AUTH JSON helpers |
 | Auth | `AuthController`, `UserService`, `UserRepository`, `PasswordHasher`, `Elo` | AUTH wire → service → SQLite; bcrypt hashes + ELO (server only) |
-| Server | `GameSession`, `MatchRoom`, `MatchQueue`, `WebSocketServer` | Network host; AUTH → PLAY; `MatchQueue` (ELO±100 buckets, 60s expiry); multi-match rooms; auto-tick |
+| Server | `GameSession`, `MatchRoom`, `MatchQueue`, `ConnectionRegistry`, `MatchCoordinator`, `RoomManager`, `WebSocketServer` | Network host; AUTH → PLAY; thin `WebSocketServer` dispatches to registry + matchmaking + rooms; `MatchQueue` (ELO±100, 60s); multi-match; auto-tick |
 | Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — depends on `Img` only |
 | View | `Img`, `Renderer` | `Img` wraps OpenCV (`create`, text, blit); `Renderer` composites sprites + optional White/Black history HUD — never mutate `Board` |
 | Text tests | `ScriptParser`, `ScriptRunner` | Scripted stdin integration |

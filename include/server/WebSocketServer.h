@@ -15,21 +15,16 @@
 #include "auth/AuthController.h"
 #include "auth/UserRepository.h"
 #include "auth/UserService.h"
-#include "bus/GameEvent.h"
-#include "bus/MoveLogSubscriber.h"
-#include "bus/SoundSubscriber.h"
 #include "server/ConnectionRegistry.h"
-#include "server/MatchQueue.h"
-#include "server/MatchRoom.h"
+#include "server/MatchCoordinator.h"
+#include "server/RoomManager.h"
 
 #include <asio.hpp>
 #include <websocketpp/config/asio_no_tls.hpp>
 #include <websocketpp/server.hpp>
 
-#include <map>
 #include <memory>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 using WsServer = websocketpp::server<websocketpp::config::asio>;
@@ -42,15 +37,9 @@ class WebSocketServer {
     UserRepository usersRepo_;
     UserService users_;
     AuthController auth_;
-    MoveLogSubscriber moveLog_;
-    SoundSubscriber sound_;
-
-    std::map<ConnectionHdl, ClientConn, std::owner_less<ConnectionHdl>> clients_;
-    std::unordered_map<MatchQueue::PlayerId, ConnectionHdl> playerToHdl_;
-    std::map<int, std::unique_ptr<MatchRoom>> rooms_;
-    MatchQueue matchQueue_;
-    MatchQueue::PlayerId nextPlayerId_ = 1;
-    int nextMatchId_ = 1;
+    ConnectionRegistry registry_;
+    MatchCoordinator matchCoordinator_;
+    RoomManager roomManager_;
 
     std::unique_ptr<asio::steady_timer> tickTimer_;
     bool running_ = false;
@@ -59,19 +48,10 @@ class WebSocketServer {
     void onClose(ConnectionHdl hdl);
     void onMessage(ConnectionHdl hdl, WsServer::message_ptr msg);
     void handleAuth(ConnectionHdl hdl, const std::string& line);
-    void handlePlay(ConnectionHdl hdl);
-    void tryMatch(ConnectionHdl joiner);
-    void createMatch(ConnectionHdl white, ConnectionHdl black);
-    int seatedPlayerCount() const;
-    bool usernameAlreadyConnected(const std::string& username) const;
-    void expireQueueEntries();
-    void tearDownMatch(int matchId, ConnectionHdl exceptHdl);
     void scheduleTick();
     void onTick(const asio::error_code& ec);
-    void broadcastToRoom(const MatchRoom& room, const std::string& payload);
     void sendJson(ConnectionHdl hdl, const std::string& payload);
-    void sendSeatWelcome(ConnectionHdl hdl, MatchRoom& room, char color,
-                         const std::vector<GameEvent>& events);
+    void sendAll(const std::vector<OutboundMessage>& messages);
 
 public:
     explicit WebSocketServer(const std::string& dbPath = "data/users.db");
