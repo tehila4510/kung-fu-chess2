@@ -60,8 +60,10 @@ add_executable(KungFuChessEngineTests
     tests/GraphicsAssetPathsTest.cpp
     tests/MatchQueueTest.cpp
     tests/ConnectionRegistryTest.cpp
+    tests/MatchCoordinatorTest.cpp
     src/server/MatchQueue.cpp
     src/server/ConnectionRegistry.cpp
+    src/server/MatchCoordinator.cpp
     ${ENGINE_SOURCES}
     ${GRAPHICS_STL_SOURCES}
 )
@@ -102,6 +104,7 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
         src/server_main.cpp
         src/server/WebSocketServer.cpp
         src/server/ConnectionRegistry.cpp
+        src/server/MatchCoordinator.cpp
         src/server/MatchQueue.cpp
         src/server/MatchRoom.cpp
         src/server/GameSession.cpp

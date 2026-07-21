@@ -1,0 +1,16 @@
+---
+description: Force English-only internal reasoning (save tokens)
+alwaysApply: true
+---
+
+# English-only thinking (mandatory)
+
+CRITICAL: Internal reasoning / "thought" / chain-of-thought MUST be 100% English.
+
+- NEVER write thinking in Hebrew — not even one sentence
+- NEVER mix Hebrew into planning, tool rationale, or self-checks
+- Even when the user writes in Hebrew, THINK in English only
+- Reply language may follow the user; thinking language must NOT
+- Reason: Hebrew thinking wastes tokens
+
+If you catch yourself drafting a Hebrew thought, rewrite it in English before continuing.

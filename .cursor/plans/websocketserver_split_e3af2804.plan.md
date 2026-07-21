@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: match-coordinator
     content: Add MatchCoordinator wrapping MatchQueue; play/expire result types; mutate Queued/Authenticated via registry
-    status: in_progress
+    status: completed
   - id: room-manager
     content: Add RoomManager owning rooms_ + MoveLog/Sound; createMatch/tearDown/handleSeated/tickAll return OutboundMessage
     status: pending
