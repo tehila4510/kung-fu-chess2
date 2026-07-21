@@ -59,9 +59,16 @@ add_executable(KungFuChessEngineTests
     tests/GraphicsConfigTest.cpp
     tests/GraphicsAssetPathsTest.cpp
     tests/MatchQueueTest.cpp
+    tests/ConnectionRegistryTest.cpp
     src/server/MatchQueue.cpp
+    src/server/ConnectionRegistry.cpp
     ${ENGINE_SOURCES}
     ${GRAPHICS_STL_SOURCES}
+)
+
+# ConnectionRegistry uses websocketpp::connection_hdl (no socket I/O in tests).
+target_include_directories(KungFuChessEngineTests PRIVATE
+    "${PROJECT_SOURCE_DIR}/third_party/websocketpp"
 )
 
 enable_testing()
@@ -94,6 +101,7 @@ if(EXISTS "${WEBSOCKETPP_DIR}/websocketpp/server.hpp"
     add_executable(KungFuChessServer
         src/server_main.cpp
         src/server/WebSocketServer.cpp
+        src/server/ConnectionRegistry.cpp
         src/server/MatchQueue.cpp
         src/server/MatchRoom.cpp
         src/server/GameSession.cpp

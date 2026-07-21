@@ -18,6 +18,7 @@
 #include "bus/GameEvent.h"
 #include "bus/MoveLogSubscriber.h"
 #include "bus/SoundSubscriber.h"
+#include "server/ConnectionRegistry.h"
 #include "server/MatchQueue.h"
 #include "server/MatchRoom.h"
 
@@ -32,24 +33,6 @@
 #include <vector>
 
 using WsServer = websocketpp::server<websocketpp::config::asio>;
-using ConnectionHdl = websocketpp::connection_hdl;
-
-enum class ClientState {
-    PendingAuth,
-    Authenticated,
-    Queued,
-    Seated,
-    Viewer
-};
-
-struct ClientConn {
-    ClientState state = ClientState::PendingAuth;
-    std::string username;
-    int rating = 0;
-    MatchQueue::PlayerId playerId = -1;
-    int matchId = -1;
-    char color = '?';
-};
 
 class WebSocketServer {
     static constexpr uint16_t kPort = 9002;
