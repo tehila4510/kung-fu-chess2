@@ -184,6 +184,15 @@ if(EXISTS "${OPENCV_DIR}/include")
         src/bus/SoundSubscriber.cpp
         src/bus/MoveHistorySubscriber.cpp
         src/protocol/Algebraic.cpp
+        src/protocol/StateDeserializer.cpp
+        src/client/InboundMessageQueue.cpp
+        src/client/WebSocketClient.cpp
+        src/client/SessionBootstrap.cpp
+        src/client/RemoteStateSource.cpp
+        src/client/IMatchmaker.cpp
+        src/graphics/LocalEngineStateSource.cpp
+        src/graphics/IBoardInput.cpp
+        src/graphics/IFrameSideEffects.cpp
     )
     add_executable(KungFuChessGraphics
         src/graphics_main.cpp
@@ -203,14 +212,25 @@ if(EXISTS "${OPENCV_DIR}/include")
         src/graphics/BoardLayoutLoader.cpp
         ${GRAPHICS_ENGINE_SOURCES}
     )
-    target_include_directories(KungFuChessGraphics PRIVATE "${OPENCV_DIR}/include")
+    target_include_directories(KungFuChessGraphics PRIVATE
+        "${OPENCV_DIR}/include"
+        "${WEBSOCKETPP_DIR}"
+        "${ASIO_DIR}"
+        "${JSON_DIR}"
+    )
+    target_compile_definitions(KungFuChessGraphics PRIVATE
+        ASIO_STANDALONE
+        _WEBSOCKETPP_CPP11_STL_
+        _WEBSOCKETPP_CPP11_THREAD_
+        _WIN32_WINNT=0x0601
+    )
     target_link_directories(KungFuChessGraphics PRIVATE "${OPENCV_DIR}/bin")
     target_link_libraries(KungFuChessGraphics
         $<$<CONFIG:Debug>:${OPENCV_DIR}/bin/opencv_world451d.lib>
         $<$<NOT:$<CONFIG:Debug>>:${OPENCV_DIR}/bin/opencv_world451.lib>
     )
     if(WIN32)
-        target_link_libraries(KungFuChessGraphics PRIVATE winmm)
+        target_link_libraries(KungFuChessGraphics PRIVATE winmm ws2_32 wsock32)
         add_custom_command(TARGET KungFuChessGraphics POST_BUILD
             COMMAND ${CMAKE_COMMAND} -E copy_if_different
                 "$<$<CONFIG:Debug>:${OPENCV_DIR}/bin/opencv_world451d.dll>"

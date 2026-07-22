@@ -78,7 +78,7 @@ Renderer::Renderer(Img background, std::string window_name)
 int Renderer::showFrame(const std::vector<PlacedSprite>& sprites,
                       const std::vector<CellOverlay>& overlays, int wait_ms,
                       const std::string& banner_text,
-                      const HistoryHud& history) const {
+                      const HistoryHud& history, const UiChrome& ui) const {
     Img frame = background_.clone();
 
     for (const CellOverlay& overlay : overlays) {
@@ -98,6 +98,30 @@ int Renderer::showFrame(const std::vector<PlacedSprite>& sprites,
         drawHistoryColumn(frame, history.panel_width + history.board_width,
                           history.panel_width, "BLACK", history.black_score,
                           history.black_lines);
+    }
+
+    // Status sits in a top strip over the board (or full width if no panels),
+    // never inside the WHITE/BLACK history columns.
+    if (!ui.status_line.empty()) {
+        const int bar_h = 28;
+        const int bar_y = 4;
+        int bar_x = 0;
+        int bar_w = frame.width();
+        if (history.panel_width > 0 && history.board_width > 0) {
+            bar_x = history.panel_width;
+            bar_w = history.board_width;
+        }
+        frame.draw_filled_rect(bar_x, bar_y, bar_w, bar_h, kBlack, 0.7);
+        frame.put_text_centered_in_rect(ui.status_line, bar_x, bar_y, bar_w, bar_h,
+                                        0.42, kWhite, 1);
+    }
+
+    if (ui.show_play_button && ui.play_w > 0 && ui.play_h > 0) {
+        const cv::Scalar playFill(40, 140, 40);
+        frame.draw_filled_rect(ui.play_x, ui.play_y, ui.play_w, ui.play_h, playFill,
+                               0.85);
+        frame.put_text_centered_in_rect("PLAY", ui.play_x, ui.play_y, ui.play_w,
+                                        ui.play_h, 0.7, kWhite, 2);
     }
 
     if (!banner_text.empty()) {

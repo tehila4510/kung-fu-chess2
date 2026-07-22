@@ -4,12 +4,14 @@
 #include "bus/EventBus.h"
 #include "bus/MoveHistorySubscriber.h"
 #include "bus/SoundSubscriber.h"
-#include "engine/GameEngine.h"
+#include "client/IMatchmaker.h"
 #include "graphics/AnimationCache.h"
 #include "graphics/BoardLayout.h"
+#include "graphics/IBoardInput.h"
+#include "graphics/IFrameSideEffects.h"
+#include "graphics/IFrameStateSource.h"
 #include "graphics/PieceVisual.h"
 #include "input/BoardMapper.h"
-#include "input/Controller.h"
 #include "model/Position.h"
 #include "realtime/RestView.h"
 #include "view/Img.h"
@@ -23,19 +25,24 @@
 
 class GraphicsApplication {
 public:
-    GraphicsApplication(graphics::BoardLayout layout, view::Img background);
+    // bus may be null (online). When non-null, sound/history subscribe for offline.
+    GraphicsApplication(graphics::BoardLayout layout, view::Img background,
+                        graphics::IFrameStateSource& frameSource,
+                        client::IMatchmaker& matchmaker,
+                        graphics::IBoardInput& boardInput,
+                        graphics::IFrameSideEffects& sideEffects,
+                        EventBus* bus);
     ~GraphicsApplication();
 
     GraphicsApplication(const GraphicsApplication&) = delete;
     GraphicsApplication& operator=(const GraphicsApplication&) = delete;
 
-    // Runs until ESC/Q or the window is closed. Returns process exit code.
     int run();
 
 private:
     void publish(const GameEvent& event);
-    void publishArrivals(const GameSnapshot& before, const GameSnapshot& after);
     void handleMouseClick(const std::optional<view::MouseClick>& click);
+    bool hitPlayButton(int x, int y) const;
     std::vector<view::PlacedSprite> buildSprites(double dt_seconds);
     std::vector<view::CellOverlay> buildLegalMoveOverlays(
         const GameSnapshot& snapshot, const std::vector<MotionView>& motions) const;
@@ -49,6 +56,8 @@ private:
     static constexpr int kFrameWaitMs = 15;
     static constexpr int kMaxFrameStepMs = 100;
     static constexpr int kPanelWidth = 220;
+    static constexpr int kPlayButtonW = 120;
+    static constexpr int kPlayButtonH = 40;
     static const std::string kWindowName;
     static const std::string kSoundsDir;
 
@@ -58,21 +67,23 @@ private:
     std::pair<int, int> cell_size_;
     int board_w_;
     int panel_w_;
+    int play_btn_x_ = 0;
+    int play_btn_y_ = 0;
 
-    GameEngine engine_;
-    Controller controller_;
+    graphics::IFrameStateSource& frameSource_;
+    client::IMatchmaker& matchmaker_;
+    graphics::IBoardInput& boardInput_;
+    graphics::IFrameSideEffects& sideEffects_;
+    EventBus* bus_ = nullptr;
+
     BoardMapper mapper_;
     graphics::AnimationCache cache_;
     std::map<Position, graphics::PieceVisual> visuals_;
-    // Tracks which rest kind was last shown so animation resets on landing.
     std::map<Position, RestKind> rest_anim_keys_;
     view::Renderer renderer_;
 
-    EventBus bus_;
     SoundSubscriber sound_;
     MoveHistorySubscriber history_;
-    int whiteScore_ = 0;
-    int blackScore_ = 0;
 };
 
 #endif

@@ -1,13 +1,10 @@
 #include "GraphicsApplication.h"
 
 #include "bus/GameEvent.h"
-#include "model/Board.h"
-#include "protocol/Algebraic.h"
 #include "realtime/MotionView.h"
 #include "realtime/RestView.h"
 
 #include <algorithm>
-#include <cctype>
 #include <chrono>
 #include <iostream>
 #include <map>
@@ -29,28 +26,6 @@ int requirePositiveCellExtent(int image_extent, int grid_count, const char* axis
     return cell;
 }
 
-
-
-// Asset CSV uses "KB"/"RW" (kind + color). The engine uses "bK"/"wR" (color + kind).
-std::string assetTokenToEngine(const std::string& asset_token) {
-    if (asset_token.empty() || asset_token == ".") {
-        return ".";
-    }
-    if (asset_token.size() != 2) {
-        return asset_token;
-    }
-
-    const char kind = asset_token[0];
-    const char color_letter = asset_token[1];
-    if (!std::isalpha(static_cast<unsigned char>(kind)) ||
-        !std::isalpha(static_cast<unsigned char>(color_letter))) {
-        return asset_token;
-    }
-
-    const char color = (color_letter == 'W' || color_letter == 'w') ? 'w' : 'b';
-    return std::string(1, color) + std::string(1, kind);
-}
-
 std::string engineTokenToAsset(const std::string& engine_token) {
     if (engine_token.empty() || engine_token == ".") {
         return "";
@@ -63,21 +38,6 @@ std::string engineTokenToAsset(const std::string& engine_token) {
     const char kind = engine_token[1];
     const char color_letter = (color == 'w') ? 'W' : 'B';
     return std::string(1, kind) + std::string(1, color_letter);
-}
-
-std::vector<std::vector<std::string>> toEngineGrid(
-    const std::vector<std::vector<std::string>>& asset_grid) {
-    std::vector<std::vector<std::string>> engine_grid;
-    engine_grid.reserve(asset_grid.size());
-    for (const std::vector<std::string>& row : asset_grid) {
-        std::vector<std::string> engine_row;
-        engine_row.reserve(row.size());
-        for (const std::string& cell : row) {
-            engine_row.push_back(assetTokenToEngine(cell));
-        }
-        engine_grid.push_back(std::move(engine_row));
-    }
-    return engine_grid;
 }
 
 view::PlacedSprite placeSprite(const view::Img& sprite, double row, double col,
@@ -141,42 +101,58 @@ const std::string GraphicsApplication::kWindowName = "Kung Fu Chess";
 const std::string GraphicsApplication::kSoundsDir = "assets/sounds";
 
 GraphicsApplication::GraphicsApplication(graphics::BoardLayout layout,
-                                         view::Img background)
+                                         view::Img background,
+                                         graphics::IFrameStateSource& frameSource,
+                                         client::IMatchmaker& matchmaker,
+                                         graphics::IBoardInput& boardInput,
+                                         graphics::IFrameSideEffects& sideEffects,
+                                         EventBus* bus)
     : layout_(std::move(layout)),
       cell_w_(requirePositiveCellExtent(background.width(), layout_.cols, "column")),
       cell_h_(requirePositiveCellExtent(background.height(), layout_.rows, "row")),
       cell_size_{cell_w_, cell_h_},
       board_w_(background.width()),
       panel_w_(kPanelWidth),
-      engine_(),
-      controller_(engine_),
+      play_btn_x_((kPanelWidth - kPlayButtonW) / 2),
+      play_btn_y_(background.height() - kPlayButtonH - 24),
+      frameSource_(frameSource),
+      matchmaker_(matchmaker),
+      boardInput_(boardInput),
+      sideEffects_(sideEffects),
+      bus_(bus),
       mapper_(cell_w_, cell_h_, layout_.cols, layout_.rows, kPanelWidth, 0),
       cache_(),
       visuals_(),
       renderer_(makeWindowBackground(std::move(background), kPanelWidth), kWindowName),
       sound_(kSoundsDir, std::cout),
       history_() {
-    bus_.subscribe(&sound_);
-    bus_.subscribe(&history_);
-    engine_.setup(Board(toEngineGrid(layout_.cells)));
-    GameEvent started;
-    started.type = GameEventType::GameStarted;
-    publish(started);
+    if (bus_ != nullptr) {
+        bus_->subscribe(&sound_);
+        bus_->subscribe(&history_);
+        GameEvent started;
+        started.type = GameEventType::GameStarted;
+        publish(started);
+    }
 }
 
 GraphicsApplication::~GraphicsApplication() {
-    bus_.unsubscribe(&history_);
-    bus_.unsubscribe(&sound_);
+    if (bus_ != nullptr) {
+        bus_->unsubscribe(&history_);
+        bus_->unsubscribe(&sound_);
+    }
 }
 
 void GraphicsApplication::publish(const GameEvent& event) {
+    if (bus_ == nullptr) {
+        return;
+    }
     GameEvent stamped = event;
-    stamped.timeMs = engine_.elapsedMs();
-    bus_.publish(stamped);
+    stamped.timeMs = sideEffects_.elapsedMs();
+    bus_->publish(stamped);
 }
 
 std::string GraphicsApplication::pieceAt(const Position& at) const {
-    const GameSnapshot snap = engine_.snapshot();
+    const GameSnapshot snap = frameSource_.getSnapshot();
     if (at.row < 0 || at.col < 0 ||
         at.row >= static_cast<int>(snap.cells.size()) ||
         at.col >= static_cast<int>(snap.cells[static_cast<size_t>(at.row)].size())) {
@@ -185,58 +161,20 @@ std::string GraphicsApplication::pieceAt(const Position& at) const {
     return snap.cells[static_cast<size_t>(at.row)][static_cast<size_t>(at.col)];
 }
 
-void GraphicsApplication::publishArrivals(const GameSnapshot& before,
-                                          const GameSnapshot& after) {
-    for (const ArrivalEvent& arrival : engine_.lastArrivals()) {
-        if (arrival.piece.size() < 2) {
-            continue;
-        }
-        if (arrival.capturedPiece != "." && !arrival.capturedPiece.empty()) {
-            GameEvent captured;
-            captured.type = GameEventType::PieceCaptured;
-            captured.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
-            captured.piece = arrival.piece;
-            captured.capturedPiece = arrival.capturedPiece;
-            captured.to = protocol::positionToSquare(arrival.at, engine_.rowCount());
-            publish(captured);
-
-            const int points = capturePoints(arrival.capturedPiece);
-            if (captured.color == 'W') {
-                whiteScore_ += points;
-            } else {
-                blackScore_ += points;
-            }
-            GameEvent score;
-            score.type = GameEventType::ScoreUpdated;
-            score.whiteScore = whiteScore_;
-            score.blackScore = blackScore_;
-            publish(score);
-        }
-        if (arrival.promoted) {
-            GameEvent promoted;
-            promoted.type = GameEventType::PiecePromoted;
-            promoted.color = (arrival.piece[0] == 'w') ? 'W' : 'B';
-            promoted.piece = arrival.piece;
-            promoted.reason = "pawn_to_queen";
-            promoted.to = protocol::positionToSquare(arrival.at, engine_.rowCount());
-            publish(promoted);
-        }
-    }
-
-    if (!before.gameOver && after.gameOver) {
-        GameEvent ended;
-        ended.type = GameEventType::GameEnded;
-        ended.reason = "king_captured";
-        ended.whiteScore = whiteScore_;
-        ended.blackScore = blackScore_;
-        publish(ended);
-    }
+bool GraphicsApplication::hitPlayButton(int x, int y) const {
+    return matchmaker_.isPlayVisible() && x >= play_btn_x_ &&
+           x < play_btn_x_ + kPlayButtonW && y >= play_btn_y_ &&
+           y < play_btn_y_ + kPlayButtonH;
 }
 
 int GraphicsApplication::run() {
-    std::cout << "Click a piece to select it, then click a destination to move.\n";
-    std::cout << "Double-click a piece to jump in place.\n";
     std::cout << "Press ESC or Q (or close the window) to exit.\n";
+    if (matchmaker_.isPlayVisible()) {
+        std::cout << "Click Play to enter matchmaking.\n";
+    } else {
+        std::cout << "Click a piece to select it, then click a destination to move.\n";
+        std::cout << "Double-click a piece to jump in place.\n";
+    }
 
     auto previous_time = std::chrono::steady_clock::now();
 
@@ -250,20 +188,27 @@ int GraphicsApplication::run() {
             static_cast<int>(std::min(dt_seconds * 1000.0,
                                       static_cast<double>(kMaxFrameStepMs)));
         if (dt_ms > 0) {
-            const GameSnapshot before = engine_.snapshot();
-            engine_.wait(dt_ms);
-            publishArrivals(before, engine_.snapshot());
+            const GameSnapshot before = sideEffects_.captureBeforeAdvance();
+            frameSource_.advance(dt_ms);
+            sideEffects_.onAfterAdvance(before);
+        } else {
+            frameSource_.advance(0);
         }
 
         const std::vector<view::PlacedSprite> sprites = buildSprites(dt_seconds);
-        const GameSnapshot snapshot = engine_.snapshot();
-        const std::vector<MotionView> motions = engine_.activeMotions();
-        const std::vector<RestView> rests = engine_.activeRests();
+        const GameSnapshot snapshot = frameSource_.getSnapshot();
+        const std::vector<MotionView> motions = frameSource_.activeMotions();
+        const std::vector<RestView> rests = frameSource_.activeRests();
         std::vector<view::CellOverlay> overlays = buildRestOverlays(rests);
         const std::vector<view::CellOverlay> legal =
             buildLegalMoveOverlays(snapshot, motions);
         overlays.insert(overlays.end(), legal.begin(), legal.end());
-        const std::string banner = snapshot.gameOver ? "GAME OVER" : "";
+
+        std::string banner = matchmaker_.bannerText();
+        if (banner.empty() && (snapshot.gameOver || frameSource_.isGameOver())) {
+            banner = "GAME OVER";
+        }
+
         view::HistoryHud history_hud;
         history_hud.panel_width = panel_w_;
         history_hud.board_width = board_w_;
@@ -271,8 +216,18 @@ int GraphicsApplication::run() {
         history_hud.black_score = history_.blackScore();
         history_hud.white_lines = formatHistoryLines(history_.whiteEntries());
         history_hud.black_lines = formatHistoryLines(history_.blackEntries());
-        const int key =
-            renderer_.showFrame(sprites, overlays, kFrameWaitMs, banner, history_hud);
+
+        view::UiChrome ui;
+        ui.show_play_button = matchmaker_.isPlayVisible();
+        ui.play_x = play_btn_x_;
+        ui.play_y = play_btn_y_;
+        ui.play_w = kPlayButtonW;
+        ui.play_h = kPlayButtonH;
+        ui.status_line = matchmaker_.statusLine();
+
+        const int key = renderer_.showFrame(sprites, overlays, kFrameWaitMs, banner,
+                                            history_hud, ui);
+
         handleMouseClick(view::Img::pollMouseClick(kWindowName));
         if (isExitKey(key) || !renderer_.isOpen()) {
             break;
@@ -290,89 +245,13 @@ void GraphicsApplication::handleMouseClick(
         return;
     }
 
-    const std::optional<Position> cell = mapper_.pixelToCell(click->x, click->y);
-    if (!cell) {
-        if (!click->is_double) {
-            const bool hadSelection = controller_.hasActiveSelection();
-            controller_.clearSelection();
-            if (hadSelection) {
-                GameEvent cleared;
-                cleared.type = GameEventType::SelectionCleared;
-                publish(cleared);
-            }
-        }
-        std::cout << "Click off board at (" << click->x << ", " << click->y << ")\n";
+    if (hitPlayButton(click->x, click->y)) {
+        matchmaker_.requestPlay();
+        std::cout << "Play requested.\n";
         return;
     }
 
-    if (click->is_double) {
-        const std::string piece = pieceAt(*cell);
-        const MoveOutcome result = controller_.jump(*cell);
-        if (result.is_accepted) {
-            std::cout << "Jump accepted at (" << cell->row << ", " << cell->col << ")\n";
-            const std::string square =
-                protocol::positionToSquare(*cell, engine_.rowCount());
-            GameEvent jumpEvent;
-            jumpEvent.type = GameEventType::JumpMade;
-            jumpEvent.color = (piece.size() == 2 && piece[0] == 'w') ? 'W' : 'B';
-            jumpEvent.piece = piece;
-            jumpEvent.from = square;
-            jumpEvent.to = square;
-            publish(jumpEvent);
-        } else {
-            std::cout << "Jump rejected: " << result.reason << '\n';
-        }
-        return;
-    }
-
-    const bool hadSelection = controller_.hasActiveSelection();
-    const Position from = hadSelection ? controller_.selectedCell() : Position{};
-    const std::string mover = hadSelection ? pieceAt(from) : std::string(".");
-    const ClickResult result = controller_.click(*cell);
-    switch (result.outcome) {
-        case ClickOutcome::Selected: {
-            std::cout << "Selected piece at (" << cell->row << ", " << cell->col
-                      << ")\n";
-            const std::string piece = pieceAt(*cell);
-            GameEvent selected;
-            selected.type = GameEventType::PieceSelected;
-            selected.color = (piece.size() == 2 && piece[0] == 'w') ? 'W' : 'B';
-            selected.piece = piece;
-            publish(selected);
-            break;
-        }
-        case ClickOutcome::Cleared: {
-            std::cout << "Selection cleared\n";
-            GameEvent cleared;
-            cleared.type = GameEventType::SelectionCleared;
-            publish(cleared);
-            break;
-        }
-        case ClickOutcome::MoveRequested:
-            if (result.moveResult.is_accepted) {
-                std::cout << "Move accepted to (" << cell->row << ", " << cell->col
-                          << ")\n";
-                GameEvent moveEvent;
-                moveEvent.type = GameEventType::MoveMade;
-                moveEvent.color = (mover.size() == 2 && mover[0] == 'w') ? 'W' : 'B';
-                moveEvent.piece = mover;
-                moveEvent.from =
-                    protocol::positionToSquare(from, engine_.rowCount());
-                moveEvent.to =
-                    protocol::positionToSquare(*cell, engine_.rowCount());
-                publish(moveEvent);
-            } else {
-                std::cout << "Move rejected: " << result.moveResult.reason << '\n';
-                GameEvent cleared;
-                cleared.type = GameEventType::SelectionCleared;
-                publish(cleared);
-            }
-            break;
-        case ClickOutcome::Ignored:
-            std::cout << "Click ignored at (" << cell->row << ", " << cell->col
-                      << ")\n";
-            break;
-    }
+    boardInput_.handleClick(*click, mapper_);
 }
 
 void GraphicsApplication::pruneStaleVisuals(
@@ -423,9 +302,9 @@ graphics::PieceVisual& GraphicsApplication::ensureVisual(const Position& cell,
 
 std::vector<view::PlacedSprite> GraphicsApplication::buildSprites(
     double dt_seconds) {
-    const GameSnapshot snapshot = engine_.snapshot();
-    const std::vector<MotionView> motions = engine_.activeMotions();
-    const std::vector<RestView> rests = engine_.activeRests();
+    const GameSnapshot snapshot = frameSource_.getSnapshot();
+    const std::vector<MotionView> motions = frameSource_.activeMotions();
+    const std::vector<RestView> rests = frameSource_.activeRests();
     const std::map<Position, const RestView*> rests_by_cell = indexRests(rests);
 
     std::set<Position> motion_sources;
@@ -536,11 +415,16 @@ std::vector<view::CellOverlay> GraphicsApplication::buildRestOverlays(
 std::vector<view::CellOverlay> GraphicsApplication::buildLegalMoveOverlays(
     const GameSnapshot& snapshot, const std::vector<MotionView>& motions) const {
     std::vector<view::CellOverlay> overlays;
-    if (!controller_.hasActiveSelection()) {
+    if (!boardInput_.hasActiveSelection()) {
         return overlays;
     }
 
-    const Position selected = controller_.selectedCell();
+    const std::set<Position> legal_moves = boardInput_.legalMovesFromSelection();
+    if (legal_moves.empty()) {
+        return overlays;
+    }
+
+    const Position selected = boardInput_.selectedCell();
     const std::string selected_token = [&snapshot, &selected]() -> std::string {
         if (selected.row < 0 || selected.row >= static_cast<int>(snapshot.cells.size())) {
             return ".";
@@ -558,7 +442,6 @@ std::vector<view::CellOverlay> GraphicsApplication::buildLegalMoveOverlays(
     }
 
     const char mover_color = selected_token[0];
-    const std::set<Position> legal_moves = engine_.legalMovesFrom(selected);
     const int cell_min = std::min(cell_w_, cell_h_);
     const int move_dot_radius = std::max(3, cell_min * 8 / 100);
     const int capture_radius = std::max(4, cell_min * 11 / 100);
@@ -576,8 +459,8 @@ std::vector<view::CellOverlay> GraphicsApplication::buildLegalMoveOverlays(
 
         if (!is_capture) {
             for (const MotionView& motion : motions) {
-                if (motion.from == motion.to && motion.from == dest
-                    && motion.piece.size() == 2 && motion.piece[0] != mover_color) {
+                if (motion.from == motion.to && motion.from == dest &&
+                    motion.piece.size() == 2 && motion.piece[0] != mover_color) {
                     is_capture = true;
                     break;
                 }

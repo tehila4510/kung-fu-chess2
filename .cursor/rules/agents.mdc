@@ -35,7 +35,7 @@ alwaysApply: true
 - C++17, STL only for the engine, console app, and tests — no third-party deps there
 - Headers in `include/`, sources in `src/`
 - Build: `.\build.bat` builds and runs the app (`src\main.cpp` composition root); `.\build.bat test` builds and runs the engine test suite (includes STL graphics tests for board CSV / config / asset paths); `.\build.bat graphics-test` builds and runs OpenCV graphics unit tests; `.\build.bat server` builds the WebSocket server (requires `third_party/` deps — see README)
-- **Graphics only:** use the Qama Tech `Img` wrapper (`include/view/Img.h`, `src/view/Img.cpp`) from the course repo; OpenCV is allowed **only** inside that `Img` class (bundled `OpenCV_451` for `build.bat graphics` / `graphics-test`). No other graphics or rendering libraries (SDL, SFML, GLFW, etc.). Never `#include <opencv2/...>` outside `Img.h` / `Img.cpp` — all other graphics code (`graphics/`, `Renderer`, `GraphicsApplication`, `graphics_main`) goes through the `Img` API. `build.bat graphics` builds `src/graphics_main.cpp` (thin entry) + `GraphicsApplication` (frame loop, click-to-move, `PieceVisual` state animations for idle/move/jump/rest).
+- **Graphics only:** use the Qama Tech `Img` wrapper (`include/view/Img.h`, `src/view/Img.cpp`) from the course repo; OpenCV is allowed **only** inside that `Img` class (bundled `OpenCV_451` for `build.bat graphics` / `graphics-test`). No other graphics or rendering libraries (SDL, SFML, GLFW, etc.). Never `#include <opencv2/...>` outside `Img.h` / `Img.cpp` — all other graphics code (`graphics/`, `Renderer`, `GraphicsApplication`, `graphics_main`) goes through the `Img` API. `build.bat graphics` builds `src/graphics_main.cpp` (composition root: default online WebSocket + shell AUTH, or `--offline`) + `GraphicsApplication` (frame loop via injected `IFrameStateSource` / `IMatchmaker`, `PieceVisual` animations).
 
 ## Language
 
@@ -52,15 +52,16 @@ include/
 ├── engine/      GameEngine
 ├── io/          BoardParser, BoardPrinter (IBoardPrinter)
 ├── input/       Controller, BoardMapper
-├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual
+├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual, IFrameStateSource, LocalEngineStateSource
+├── client/      WebSocketClient, InboundMessageQueue, SessionBootstrap, RemoteStateSource, IMatchmaker (graphics online path)
 ├── view/        Img (OpenCV wrapper), Renderer
 ├── texttests/   ScriptParser (IScriptSource), ScriptRunner, ScriptCommand
 ├── bus/         EventBus (Observer pub/sub), GameEvent, MoveLog/Sound/MoveHistory/Rating subscribers
 ├── auth/        AuthController → UserService → UserRepository; PasswordHasher (bcrypt), Elo
-├── protocol/    Algebraic, CommandParser, StateSerializer (nlohmann/json)
+├── protocol/    Algebraic, CommandParser, StateSerializer, StateDeserializer
 ├── server/      GameSession, MatchRoom, MatchQueue, ConnectionRegistry, MatchCoordinator, RoomManager, WebSocketServer
 ├── App.h        Composition root (console)
-└── GraphicsApplication.h  Interactive graphics composition root (frame loop)
+└── GraphicsApplication.h  Interactive graphics frame loop (injected IFrameStateSource + IMatchmaker)
 ```
 
 > Legacy `Board.h`/`Board.cpp`, `Game.h`/`Game.cpp`, `MoveRules.h`/`MoveRules.cpp` are removed.
@@ -102,8 +103,9 @@ server_main → server/protocol/bus/auth → engine → rules/realtime → model
 | Protocol | `CommandParser`, `StateSerializer`, `Algebraic` | Wire text/JSON ↔ engine calls; AUTH JSON helpers |
 | Auth | `AuthController`, `UserService`, `UserRepository`, `PasswordHasher`, `Elo` | AUTH wire → service → SQLite; bcrypt hashes + ELO (server only) |
 | Server | `GameSession`, `MatchRoom`, `MatchQueue`, `ConnectionRegistry`, `MatchCoordinator`, `RoomManager`, `WebSocketServer` | Network host; AUTH → PLAY; thin transport dispatches to registry + matchmaking + rooms; `MatchQueue` (ELO±100, 60s); multi-match; auto-tick |
-| Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual` | Load/scale sprites, play named state animations, read asset layout — via `Img` only |
-| View | `Img`, `Renderer` | `Img` wraps OpenCV (`create`, text, blit); `Renderer` composites sprites + optional White/Black history HUD over a wider window |
+| Graphics | `Animation`, `AnimationCache`, `AnimationLoader`, `BoardLayout`, `PieceVisual`, `IFrameStateSource` | Load/scale sprites, play named state animations, read asset layout — via `Img` only; frame state via `IFrameStateSource` |
+| Client | `WebSocketClient`, `SessionBootstrap`, `RemoteStateSource`, `IMatchmaker` | Graphics online path: shell AUTH then Play; I/O thread + inbound queue; no OpenCV |
+| View | `Img`, `Renderer` | `Img` wraps OpenCV (`create`, text, blit); `Renderer` composites sprites + optional White/Black history HUD + Play chrome over a wider window |
 | App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Wire layers; console, graphics, and server entry points |
 
 ### Patterns

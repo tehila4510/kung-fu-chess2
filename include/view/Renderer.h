@@ -46,13 +46,24 @@ struct HistoryHud {
     int board_width = 0;
 };
 
+// Optional Play button + status line drawn by Renderer (OpenCV only).
+struct UiChrome {
+    bool show_play_button = false;
+    int play_x = 0;
+    int play_y = 0;
+    int play_w = 0;
+    int play_h = 0;
+    std::string status_line;
+};
+
 class Renderer {
 public:
     Renderer(Img background, std::string window_name);
     int showFrame(const std::vector<PlacedSprite>& sprites,
                   const std::vector<CellOverlay>& overlays, int wait_ms,
                   const std::string& banner_text = "",
-                  const HistoryHud& history = HistoryHud{}) const;
+                  const HistoryHud& history = HistoryHud{},
+                  const UiChrome& ui = UiChrome{}) const;
 
     bool isOpen() const;
 

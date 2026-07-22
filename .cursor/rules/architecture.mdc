@@ -15,11 +15,12 @@ alwaysApply: true
 | Engine | `engine/` | `GameEngine` — orchestrates model + rules + realtime; no I/O |
 | I/O | `io/` | `BoardParser`, `BoardPrinter` — parse/serialize board text |
 | Input | `input/` | `Controller`, `BoardMapper` — map user events to engine calls |
-| Graphics | `graphics/` | `Animation`, `AnimationCache` (`AnimationSpec`), `AnimationLoader`, `BoardLayout`, `PieceVisual` — load/scale sprite frames, play named state animations, read asset board layout; depends on `Img` only |
-| View | `view/` | `Img` (OpenCV wrapper) + `Renderer` — composites sprites, optional White/Black history HUD, drives the window; never mutates `Board` |
+| Graphics | `graphics/` | `Animation`, `AnimationCache` (`AnimationSpec`), `AnimationLoader`, `BoardLayout`, `PieceVisual`, `IFrameStateSource`, `LocalEngineStateSource` — sprites/layout; frame state abstraction; depends on `Img` only for pixels |
+| Client | `client/` | `WebSocketClient`, `InboundMessageQueue`, `SessionBootstrap`, `RemoteStateSource`, `IMatchmaker` — graphics online path (shell AUTH, Play); I/O on background thread |
+| View | `view/` | `Img` (OpenCV wrapper) + `Renderer` — composites sprites, optional White/Black history HUD + Play chrome, drives the window; never mutates `Board` |
 | Text tests | `texttests/` | `ScriptParser`, `ScriptRunner` — scripted stdin integration |
 | Bus | `bus/` | `EventBus` Observer pub/sub — score/log/sound/UI/rating events (`MoveMade`, `JumpMade`, `PieceCaptured`, `PiecePromoted`, `PieceSelected`, `SelectionCleared`, `GameEnded`, `ScoreUpdated`, …); `MoveHistorySubscriber` stores graphics side-panel lines + SCORE; `RatingSubscriber` updates ELO on `GameEnded`; `capturePoints()` for material; logic does not know subscribers |
-| Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in (`AUTH`, `PLAY`, moves); JSON state/events out |
+| Protocol | `protocol/` | Algebraic ↔ `Position`; plain-text commands in (`AUTH`, `PLAY`, moves); JSON state/events out (`StateSerializer` / `StateDeserializer`) |
 | Auth | `auth/` | `AuthController` → `UserService` → `UserRepository` (SQLite); `PasswordHasher` (bcrypt), `Elo` — server-only |
 | Server | `server/` | `ConnectionRegistry` (client FSM) + `MatchCoordinator`/`MatchQueue` (ELO±100, 60s) + `RoomManager`/`MatchRoom` (per-match `GameSession` + `RatingSubscriber`) + thin `WebSocketServer` — AUTH → PLAY, multi-match, auto-tick; `Viewer` stub (Rooms TODO) |
 | App | `App`, `GraphicsApplication`, `main`, `graphics_main`, `server_main` | Composition roots: console, graphics, WebSocket server |
@@ -31,16 +32,18 @@ Dependencies point **inward only**. Outer layers may use inner; inner layers mus
 ```
 main/App → input/view/io → engine → rules/realtime → model
 server_main → server/protocol/bus/auth → engine → rules/realtime → model
+graphics_main → client(SessionBootstrap/WebSocket) + GraphicsApplication(IFrameStateSource/IMatchmaker) → graphics/view → engine (offline only)
 ```
 
-The graphics stack sits on the view side and depends inward on `view/Img` only:
+The graphics stack sits on the view side and depends inward on `view/Img` only for pixels. Frame board/motion/rest state comes from an injected `IFrameStateSource` (`LocalEngineStateSource` offline, `RemoteStateSource` online). `GraphicsApplication` does not branch on online/offline.
 
 ```
-graphics_main → GraphicsApplication → engine/input + graphics(PieceVisual) + view(Renderer/Img) + bus(MoveHistory/Sound)
-GraphicsApplication → graphics/ → view(Img)
+graphics_main → [shell AUTH] → GraphicsApplication → IFrameStateSource + IMatchmaker + graphics(PieceVisual) + view(Renderer/Img)
+offline: LocalEngineStateSource(GameEngine) + NoOpMatchmaker + Controller/bus helpers
+online:  RemoteStateSource(queue) + WsMatchmaker(WebSocketClient)  // same WS after AUTH
 ```
 
-`GraphicsApplication` builds a wider window (`White panel | board | Black panel`) via `Img::create`, offsets `BoardMapper` to the board rect, and feeds `Renderer::HistoryHud` each frame (move lines + SCORE). On capture it publishes `ScoreUpdated` using `capturePoints()`. `GameEvent::timeMs` is stamped from `GameEngine::elapsedMs()` in graphics only (not the server path).
+`GraphicsApplication` builds a wider window (`White panel | board | Black panel`) via `Img::create`, offsets `BoardMapper` to the board rect, and feeds `Renderer::HistoryHud` each frame (move lines + SCORE). Online lobby shows Play chrome until seated remote `state` messages arrive.
 
 `graphics/` and `Renderer` must never `#include <opencv2/...>`; all pixel work goes through the `Img` API.
 

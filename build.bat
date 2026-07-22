@@ -163,9 +163,25 @@ if /i "%~1"=="graphics" (
     )
 
     call "!VCVARS!"
-    set GRAPHICS_ENGINE_SOURCES=src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\input\BoardMapper.cpp src\input\Controller.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\SoundSubscriber.cpp src\bus\MoveHistorySubscriber.cpp src\protocol\Algebraic.cpp
-    set GRAPHICS_SOURCES=src\graphics_main.cpp src\GraphicsApplication.cpp src\view\Img.cpp src\view\Renderer.cpp src\graphics\Animation.cpp src\graphics\AnimationLoader.cpp src\graphics\AnimationCache.cpp src\graphics\PieceVisual.cpp src\graphics\GraphicsConfigLoader.cpp src\graphics\AssetPaths.cpp src\graphics\BoardLayout.cpp src\graphics\FileFrameSource.cpp src\graphics\FileBoardSource.cpp src\graphics\FileConfigSource.cpp src\graphics\BoardLayoutLoader.cpp !GRAPHICS_ENGINE_SOURCES!
-    cl /nologo /EHsc /std:c++17 /Iinclude /I!OPENCV_INC! /Fo:build\ !GRAPHICS_SOURCES! /Fe:build\KungFuChessGraphics.exe /link /LIBPATH:!OPENCV_BIN! opencv_world451.lib user32.lib gdi32.lib winmm.lib
+    if not exist third_party\websocketpp\websocketpp\client.hpp (
+        echo ERROR: third_party\websocketpp not found.
+        echo Clone deps first — see README ^(same deps as server target^).
+        exit /b 1
+    )
+    if not exist third_party\asio\asio\include\asio.hpp (
+        echo ERROR: third_party\asio not found.
+        exit /b 1
+    )
+    if not exist third_party\json\single_include\nlohmann\json.hpp (
+        echo ERROR: third_party\json not found.
+        exit /b 1
+    )
+    set GRAPHICS_ENGINE_SOURCES=src\model\Cell.cpp src\model\Board.cpp src\model\GameState.cpp src\model\Piece.cpp src\model\Position.cpp src\rules\PieceRules.cpp src\rules\RuleEngine.cpp src\realtime\RealTimeArbiter.cpp src\engine\GameEngine.cpp src\input\BoardMapper.cpp src\input\Controller.cpp src\bus\EventBus.cpp src\bus\GameEvent.cpp src\bus\SoundSubscriber.cpp src\bus\MoveHistorySubscriber.cpp src\protocol\Algebraic.cpp src\protocol\StateDeserializer.cpp
+    set GRAPHICS_CLIENT_SOURCES=src\client\InboundMessageQueue.cpp src\client\WebSocketClient.cpp src\client\SessionBootstrap.cpp src\client\RemoteStateSource.cpp src\client\IMatchmaker.cpp src\graphics\LocalEngineStateSource.cpp src\graphics\IBoardInput.cpp src\graphics\IFrameSideEffects.cpp
+    set GRAPHICS_SOURCES=src\graphics_main.cpp src\GraphicsApplication.cpp src\view\Img.cpp src\view\Renderer.cpp src\graphics\Animation.cpp src\graphics\AnimationLoader.cpp src\graphics\AnimationCache.cpp src\graphics\PieceVisual.cpp src\graphics\GraphicsConfigLoader.cpp src\graphics\AssetPaths.cpp src\graphics\BoardLayout.cpp src\graphics\FileFrameSource.cpp src\graphics\FileBoardSource.cpp src\graphics\FileConfigSource.cpp src\graphics\BoardLayoutLoader.cpp !GRAPHICS_CLIENT_SOURCES! !GRAPHICS_ENGINE_SOURCES!
+    set GRAPHICS_DEFINES=/DASIO_STANDALONE /D_WEBSOCKETPP_CPP11_STL_ /D_WEBSOCKETPP_CPP11_THREAD_ /D_WIN32_WINNT=0x0601
+    set GRAPHICS_INCLUDES=/Iinclude /I!OPENCV_INC! /Ithird_party\websocketpp /Ithird_party\asio\asio\include /Ithird_party\json\single_include
+    cl /nologo /EHsc /std:c++17 !GRAPHICS_DEFINES! !GRAPHICS_INCLUDES! /Fo:build\ !GRAPHICS_SOURCES! /Fe:build\KungFuChessGraphics.exe /link /LIBPATH:!OPENCV_BIN! opencv_world451.lib user32.lib gdi32.lib winmm.lib ws2_32.lib wsock32.lib
     if errorlevel 1 exit /b 1
     copy /Y "!OPENCV_BIN!\opencv_world451.dll" build\ >nul
     echo Built: build\KungFuChessGraphics.exe

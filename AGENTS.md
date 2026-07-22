@@ -15,15 +15,16 @@ include/
 ├── engine/      GameEngine
 ├── io/          BoardParser, BoardPrinter (IBoardPrinter)
 ├── input/       Controller, BoardMapper
-├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual
+├── graphics/    Animation, AnimationLoader, AnimationCache (AnimationSpec), BoardLayout, PieceVisual, IFrameStateSource, LocalEngineStateSource
+├── client/      WebSocketClient, InboundMessageQueue, SessionBootstrap, RemoteStateSource, IMatchmaker
 ├── view/        Img (OpenCV wrapper), Renderer
 ├── texttests/   ScriptParser (IScriptSource), ScriptRunner, ScriptCommand
 ├── bus/         EventBus (Observer), GameEvent, MoveLog/Sound/MoveHistory/Rating subscribers
 ├── auth/        AuthController → UserService → UserRepository; PasswordHasher (bcrypt), Elo
-├── protocol/    Algebraic, CommandParser, StateSerializer
+├── protocol/    Algebraic, CommandParser, StateSerializer, StateDeserializer
 ├── server/      GameSession, MatchRoom, MatchQueue, ConnectionRegistry, MatchCoordinator, RoomManager, WebSocketServer
 ├── App.h        Composition root (console)
-└── GraphicsApplication.h  Interactive graphics composition root (frame loop)
+└── GraphicsApplication.h  Interactive graphics frame loop (injected IFrameStateSource + IMatchmaker)
 
 src/             mirrors include/ paths + main.cpp + graphics_main.cpp + GraphicsApplication.cpp + server_main.cpp
 third_party/     websocketpp, asio, nlohmann/json, sqlite, bcrypt (see README)
@@ -44,7 +45,7 @@ CMakeLists.txt   optional CMake build
 > Users/ratings in SQLite via `AuthController` → `UserService` → `UserRepository`;
 > per-match `RatingSubscriber` applies ELO on `GameEnded` through `UserService`.
 > `SoundSubscriber` plays WAV cues from `assets/sounds/` (`select`, `deselect`, `move`, `jump`, `capture`, `promote`, `game_end`, `game_start`).
-> Graphics draws a centered **GAME OVER** banner when `GameSnapshot::gameOver` is true, and White/Black side panels list moves (piece, from-to, game-clock time) and capture `SCORE` (material: P1 N/B3 R5 Q9) via `MoveHistorySubscriber`. `GameEvent::timeMs` is stamped from `GameEngine::elapsedMs()` in the graphics app only.
+> Graphics online path: `graphics_main` defaults to `ws://127.0.0.1:9002`, shell `AUTH user pass` via `SessionBootstrap` before any OpenCV window, then `RemoteStateSource` + Play button. Pass `--offline` for local `GameEngine` via `LocalEngineStateSource`. `GraphicsApplication` reads frame state only through `IFrameStateSource` (no online/offline branching).
 
 ## Build & verify
 
@@ -56,10 +57,11 @@ CMakeLists.txt   optional CMake build
 .\build.bat server # WebSocket server on :9002 (clone third_party deps first — see README)
 ```
 
-`build.bat graphics` builds `src/graphics_main.cpp` — a thin entry point that loads
-`assets/pieces/board.csv` + `assets/board.png`, constructs `GraphicsApplication`, and calls `run()`.
-`GraphicsApplication` owns the engine/input wiring, `PieceVisual` state animations, delta-time loop,
-and rendering. The window closes on ESC/Q or when the user closes it.
+`build.bat graphics` builds `src/graphics_main.cpp` — composition root that either connects online
+(default `ws://127.0.0.1:9002`, shell AUTH, then Play / remote state) or runs `--offline` with a local
+`GameEngine` via `LocalEngineStateSource`. `GraphicsApplication` owns the frame loop and reads
+board/motions/rests only through injected `IFrameStateSource`. The window closes on ESC/Q or when
+the user closes it.
 
 `build.bat test` also covers OpenCV-free graphics helpers (`BoardLayout`, `FileConfigSource`,
 `AssetPaths`). `build.bat graphics-test` builds `KungFuChessGraphicsTests.exe` with MSVC + OpenCV
